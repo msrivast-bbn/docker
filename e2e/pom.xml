@@ -7,53 +7,42 @@
       <version>2.7.1-SNAPSHOT</version>
       <relativePath>../pom.xml</relativePath>
     </parent>
-    <artifactId>parliament</artifactId>
-    <version>2.7.10</version>
-    <name>parliament</name>
-    <description>A Docker image with the Parliament Triple-Store</description>
+    <artifactId>e2e</artifactId>
+    <name>e2e</name>
+    <description>A Docker image of the Adept E2E system</description>
     <dependencies>
       <dependency>
-        <groupId>com.bbn</groupId>
-        <artifactId>parliamentQS</artifactId>
-        <version>2.7.10</version>
-        <type>zip</type>
+        <groupId>adept</groupId>
+        <artifactId>adept-e2e</artifactId>
+        <version>${project.version}</version>
+        <classifier>bin</classifier>
+        <type>tar.gz</type>
       </dependency>
     </dependencies>
-    <!--
-         docker run -it -p 8089:xxxx adept/xxxx
-    -->
     <build>
-      <resources>
-        <resource>
-          <directory>${project.basedir}/src/main/docker</directory>
-          <filtering>true</filtering>
-          <includes>
-            <include>**/Dockerfile</include>
-          </includes>
-        </resource>
-      </resources>
         <plugins>
             <plugin>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
-                        <id>copy-parliament-zip</id>
-                        <phase>process-sources</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>com.bbn</groupId>
-                                    <artifactId>parliamentQS</artifactId>
-                                    <version>${project.version}</version>
-                                    <type>zip</type>
-                                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
+                      <id>unpack-e2e</id>
+                      <phase>prepare-package</phase>
+                      <goals>
+                          <goal>unpack</goal>
+                      </goals>
+                      <configuration>
+                          <artifactItems>
+                              <artifactItem>
+                                <groupId>adept</groupId>
+                                <artifactId>adept-e2e</artifactId>
+                                <version>${project.version}</version>
+                                <classifier>bin</classifier>
+                                <type>tar.gz</type>
+                                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                              </artifactItem>
+                          </artifactItems>
+                      </configuration>
                     </execution>
                 </executions>
             </plugin>

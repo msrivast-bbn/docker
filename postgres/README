@@ -1,0 +1,21 @@
+# Examplem command:
+docker run -d --name=postgres7900 --restart=always --env POSTGRES_PASSWORD=password -p 7900:5432 deft/postgres postgres
+env options:
+POSTGRES_PASSWORD : Sets the superuser password for the initial database at the
+                    initial run. NO DEFAULT!
+POSTGRES_USER     : Sets the superuser username for the initial database at the
+                    initial run. Defaults to 'postgres'.
+PGDATA            : Sets the location for the database.  Defaults to
+                    '/var/lib/postgresql/data', which should be fine for our
+                    purposes. If you are mounting a volume to hold the database
+                    on the host or a shared file system, then you should choose
+                    a directory under the default, such as
+                    '/var/lib/postgresql/data/mydata'.
+POSTGRES_DB       : Define the name for the default database. Defaults to the
+                    value of POSTGRES_USER.
+POSTGRES_INITDB_ARGS : A set of options and arguments to pass to postgres initdb.
+                    Example: --env POSTGRES_INITDB_ARGS="--locale=en_US.UTF8"
+POSTGRES_INITDB_XLOGDIR : Select a different directory to store transaction logs.
+                    Default is $PGDATA/pg_xlog
+
+See https://github.com/docker-library/docs/tree/master/postgres for more information.

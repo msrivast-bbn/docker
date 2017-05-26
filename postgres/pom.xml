@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+      <groupId>mil.darpa.i2o</groupId>
+      <artifactId>deft-docker</artifactId>
+      <version>2.7.1-SNAPSHOT</version>
+      <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>postgresql</artifactId>
+    <version>8.4.20</version>
+    <description>A Docker image with the PostgreSQL Server</description>
+    <!--
+         docker run -it -p 5432:xxxx deft/xxxx
+    -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>build-image</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                        <configuration>
+                          <images>
+                            <image>
+                              <name>deft/${project.artifactId}:${project.version}</name>
+                              <build>
+                                <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
+                              </build>
+                            </image>
+                          </images>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
