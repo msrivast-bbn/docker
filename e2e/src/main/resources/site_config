@@ -1,0 +1,6 @@
+e2e_config_shared_top=/nfs/mercury-04/u40/
+pgresadmin=postgres
+pgresadminpw=
+deploymode=cluster
+master=yarn
+

@@ -1,6 +1,7 @@
 #!/bin/bash
 set -eu
 set -o pipefail
+
 trap '
 	exit_status=$?; \
 	exit_command="${BASH_COMMAND}"; \
@@ -10,10 +11,10 @@ trap '
 	fi' \
 EXIT
 
-if [[ $# -ne 4 ]]; then
-	echo "Usage: $(basename $0) <local e2e config file> <local input directory> <num partitions> <num executors>"
+if [[ $# -ne 2 ]]; then
+	echo "Usage: $(basename $0) <num partitions> <num executors>"
 	echo "e.g.:"
-	echo "  $(basename $0) ./e2e_config.xml ./e2e-inputs 1 1"
+	echo "  $(basename $0) 1 1"
 	echo "Exiting"
 	exit 1
 fi
@@ -26,17 +27,45 @@ log() {
 	echo ">>> $1"
 }
 
+E2E_HOME=$(dirname $(dirname $0))
+if [ ! -r ${E2E_HOME}/etc/site_config ]; then
+  echo "${E2E_HOME}/etc/site_config does not exist or is not readable"
+  echo Exiting
+  exit 1
+fi
+
+source ${E2E_HOME}/etc/site_config
+
+if [ "/e2e_config"X == "X" ]; then
+  echo '/e2e_config is not defined in site_config'
+  echo Exiting
+  exit 1
+fi
+
+if [ ! -e "/e2e_config" ]; then
+  echo "\/e2e_config \"/e2e_config\" does not exist"
+  echo Exiting
+  exit 1
+fi
+
+if [ ! -d "/e2e_config" ]; then
+  echo "\/e2e_config \"/e2e_config\" is not a directory"
+  echo Exiting
+  exit 1
+fi
+
+if [ ! -w "/e2e_config" ]; then
+  echo "\/e2e_config \"/e2e_config\" is not writable"
+  echo Exiting
+  exit 1
+fi
+
 ###
 timestamp="$(date +%s)"
 log "the UTC timestamp / id of this script execution is ${timestamp}"
 
-if [ ! -d "target" ]; then
-	echo "must compile adept-e2e before running this script"
-	exit 1
-fi
-
 log "processing ${e2e_config}"
-e2e_config_shared_directory="/nfs/mercury-04/u40/$(id -un)"
+e2e_config_shared_directory="/sharedData/$(id -un)"
 mkdir -p "${e2e_config_shared_directory}"
 e2e_config_shared="${e2e_config_shared_directory}/e2e_config_${timestamp}.xml"
 cp "${e2e_config}" "${e2e_config_shared}"
@@ -46,34 +75,13 @@ for e2e_config_attribute in "metadata_host" "metadata_port" "metadata_db" "metad
 done
 
 log "creating KB schema"
-adept_kb_version=$(python <<-'EOF'
-	import re, lxml.etree
-	pom_xml=lxml.etree.fromstring(re.sub("<project (.*?)>", "<project>", open("pom.xml").read()))
-	adept_kb_version=pom_xml.xpath("/project/dependencies/dependency[artifactId = 'adept-kb']/version")[0].text
-	if adept_kb_version == "${project.version}": adept_kb_version = pom_xml.xpath("/project/version")[0].text
-	print adept_kb_version
-EOF
-)
-local_maven_repo=$(python <<-'EOF'
-	import os, re, lxml.etree
-	settings_xml=lxml.etree.fromstring(re.sub("<settings (.*?)>", "<settings>", open(os.path.expanduser("~") + "/.m2/settings.xml").read()))
-	local_maven_repo=settings_xml.xpath("/settings/localRepository")[0].text.rstrip("/")
-	print local_maven_repo
-EOF
-)
-unzip -p "${local_maven_repo}/adept/adept-kb/${adept_kb_version}/adept-kb-${adept_kb_version}.jar" 'adept/utilities/DEFT KB create schema.txt'\
+
+cat "${E2E_HOME}/etc/DEFT KB create schema.txt" \
 	| PGPASSWORD="${metadata_password}" psql -d "${metadata_db}" -U "${metadata_user_name}" -h "${metadata_host}" -p ${metadata_port} -f -
 
-adept_e2e_version=$(python <<-'EOF'
-	import re, lxml.etree
-	pom_xml=lxml.etree.fromstring(re.sub("<project (.*?)>", "<project>", open("pom.xml").read()))
-	adept_e2e_version = pom_xml.xpath("/project/version")[0].text
-	print adept_e2e_version
-EOF
-)
 input_dir_hdfs="$(basename ${input_dir})_input_${timestamp}"
 log "uploading local input directory to hdfs"
-hadoop fs -put "${input_dir}" "${input_dir_hdfs}"
+hadoop fs -put "/input" "${input_dir_hdfs}"
 output_dir_hdfs="e2e_output_${timestamp}"
 spark_eventLog_dir_hdfs="hdfs:///user/$(id -un)/spark_logs/spark_logs_${timestamp}"
 hadoop fs -mkdir -p "${spark_eventLog_dir_hdfs}"
@@ -86,10 +94,10 @@ if [[ "${gather_statistics}" == "true" ]]; then
 fi
 find "${kb_report_output_dir}" -type d -exec chmod 777 {} +
 log "running spark-submit"
-/var/lib/spark-2.0.0-hadoop2.6/bin/spark-submit \
+${SPARK_HOME}/bin/spark-submit \
 	--driver-memory 80g \
 	--executor-memory 80g \
-	--conf spark.executor.extraClassPath="/nfs/mercury-04/u40/msrivast_serif_deliverable/scala_2_11/scala-library-2.11.8.jar:/nfs/mercury-04/u40/msrivast_serif_deliverable/scala_2_10/2.10.6/scala-library-2.10.6.jar" \
+	--conf spark.executor.extraClassPath="${e2e_config_shared_top}/msrivast_serif_deliverable/scala_2_11/scala-library-2.11.8.jar:${e2e_config_shared_top}/u40/msrivast_serif_deliverable/scala_2_10/2.10.6/scala-library-2.10.6.jar" \
 	--conf spark.driver.cores=5 \
 	--conf spark.eventLog.enabled=true \
 	--conf spark.eventLog.dir="${spark_eventLog_dir_hdfs}" \
@@ -102,10 +110,11 @@ log "running spark-submit"
 	--conf spark.speculation=true \
 	--conf spark.speculation.multiplier=2 \
 	--class adept.e2e.driver.E2eDriver \
-	--master yarn-cluster \
+	--master ${master:-yarn} \
+        --deploy-mode ${deploymode:-cluster} \
 	--queue pool1 \
 	--conf spark.storage.blockManagerTimeoutInterval=100000 \
-	"target/adept-e2e-${adept_e2e_version}.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find ${input_dir} -maxdepth 1 -type f | wc -l)" "${e2e_config_shared}"
+	"${E2E_HOME}/lib/adept-e2e.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find ${input_dir} -maxdepth 1 -type f | wc -l)" "${e2e_config_shared}"
 
 log "downloading output directory from hdfs"
 hadoop fs -get "${output_dir_hdfs}"

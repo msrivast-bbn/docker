@@ -8,19 +8,19 @@ ENV SPARK_HOME=/var/lib/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}
 
 ENV PATH=$SPARK_HOME/bin:$PATH JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 JRE_HOME=${JAVA_HOME}/jre PATH="${JRE_HOME}/bin:${JAVA_HOME}/bin:${PATH}"
 ENV E2E_HOME=/var/lib/adept-e2e PATH="${E2E_HOME}/bin:${PATH}"
+ENV HADOOP_CONF_DIR=/etc/hadoop/conf.shared
 
 ADD hadoop_entrypoint.sh /
 ADD spark-entrypoint.sh /
 ADD spark-historyserver.sh /
 ADD spark-master.sh /
-ADD spark-historyserver.sh /
 ADD entrypoint.sh /
 
 # default version of python is 2.7
 # initial installs
 RUN apt-get update -y && \
     apt-get upgrade -y  && \
-    apt-get install -y apt-utils curl wget python perl libterm-readline-gnu-perl openjdk-8-jdk unzip && \
+    apt-get install -y apt-utils curl wget python perl libterm-readline-gnu-perl openjdk-8-jdk unzip ssh && \
     echo 'deb http://apt.postgresql.org/pub/repos/apt xenial-pgdg main' >/etc/apt/sources.list.d/postgresql.list && \
     chmod 644 /etc/apt/sources.list.d/postgresql.list && \
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
@@ -48,11 +48,13 @@ RUN apt-get update -y && \
 
 
 # E2E
-ADD adept-e2e-${project.version}-bin.zip /tmp/
+ADD adept-e2e-bin.zip /tmp/
 RUN mkdir -p ${E2E_HOME} && \
-    unzip -d ${E2E_HOME} /tmp/adept-e2e-${project.version}-bin.zip && \
-    rm -f /tmp/adept-e2e-${project.version}-bin.zip
+    unzip -d ${E2E_HOME} /tmp/adept-e2e-bin.zip && \
+    rm -f /tmp/adept-e2e-bin.zip
+
+EXPOSE 4040
  
-#ENTRYPOINT ["/spark-entrypoint.sh"]
-CMD ["bash"]
+ENTRYPOINT ["/entrypoint.sh"]
+#CMD ["bash"]
 
