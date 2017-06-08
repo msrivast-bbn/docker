@@ -1,2 +1,2 @@
-# Example command:
+# Example command (depending on your system configuration you may need to prefix this with sudo):
 docker run -d --name=parliament8089 --restart=always -p 8089:8089 adept/parliament:2.7.10

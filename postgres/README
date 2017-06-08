@@ -1,5 +1,6 @@
-# Example command:
+# Example command (depending on your system configuration you may need to prefix this with sudo):
 docker run -d --name=postgres7900 --restart=always --env POSTGRES_PASSWORD=password -p 7900:5432 deft/postgres postgres
+
 env options:
 POSTGRES_PASSWORD : Sets the superuser password for the initial database at the
                     initial run. NO DEFAULT!
