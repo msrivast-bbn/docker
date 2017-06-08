@@ -52,9 +52,14 @@ ADD adept-e2e-bin.zip /tmp/
 RUN mkdir -p ${E2E_HOME} && \
     unzip -d ${E2E_HOME} /tmp/adept-e2e-bin.zip && \
     rm -f /tmp/adept-e2e-bin.zip
+ADD e2e.sh ${E2E_HOME}/bin/e2e.sh
+RUN chmod a+x ${E2E_HOME}/bin/e2e.sh
 
 EXPOSE 4040
  
+LABEL version=${project.version}
+LABEL timestamp=${maven.build.timestamp}
+
 ENTRYPOINT ["/entrypoint.sh"]
 #CMD ["bash"]
 

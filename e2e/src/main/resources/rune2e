@@ -1,4 +1,6 @@
 #!/bin/bash
+#
+# Script run on the dockerd host to start the E2E Container.
 set -xv
 
 function help {
@@ -37,7 +39,7 @@ if [ "${CONF}" ] ; then
   CONF=$(readlink -f ${CONF})
   check_config_dir ${CONF}
 else
-  CONF=$(readlink -f ${HOME}/e2e})
+  CONF=$(readlink -f ${HOME}/e2e)
   [ ! -d ${CONF} ] && CONF=$(readlink -f /etc/e2e)
   if [ ! -d ${CONF} -o ! -r ${CONF}] ; then
     ( errexit "ERROR: Configuration Directories \"${HOME}/e2e\" and \"/etc/e2e\" do not exist, are not directories, or are not readable")
@@ -60,16 +62,16 @@ if [ ! -d ${2} -o ! -r ${2} ] ; then
   errexit "ERROR: E2E Input Data Directory \"${2}\" does not exist, is not a directory, or is not readable"
 fi
 shared_top=$(readlink -f ${2})
-if ! [[ ${3} =~ '^[0-9]+$' ]] ; then
+if ! [[ ${3} =~ ^[0-9]+$ ]] ; then
   errexit "ERROR: number of partitions value \"${3}\" is not an integer value"
 fi
-if ! [[ ${4} =~ '^[0-9]+$' ]] ; then
+if ! [[ ${4} =~ ^[0-9]+$ ]] ; then
   errexit "ERROR: number of executors value \"${4}\" is not an integer value"
 fi
 
 source ${CONF}/site_config
 [ "${shared_top}" ] || errexit "ERROR: the \"shared_top\" variable is not defined in the \"${CONF}/shared_config\" file"
-if [ ! -f ${shared_top} -o ! -r ${shared_top} ] ; then
+if [ ! -d ${shared_top} -o ! -r ${shared_top} ] ; then
   errexit "ERROR: The E2E Shared Directory \"${shared_top}\" does not exist, is not a directory, or is not readable"
 fi
 shared_top=$(readlink -f ${shared_top})
@@ -79,11 +81,17 @@ V2=" -v ${CONF}/spark:/var/lib/spark-2.0.0-hadoop2.6/conf"
 V3=" -v ${shared_top}:/sharedData"
 V4=" -v $(readlink -f ${1}):/e2e_config"
 V5=" -v $(readlink -f ${2}):/input"
-V6=" -v ${CONF}/site_config:/site_config"
+V6=" -v ${CONF}/site_config:/var/lib/adept-e2e/etc/site_config"
 V7=" -v $(readlink -f ${PWD}):/output"
 P1=" -p 4040:4040"
 unset E1 E2
 [ "${deploymode}" ] && E1="-e deploymode=${deploymode}"
 [ "${master}" ] && E2="-e master=${master}"
-sudo docker run -it $UI $UN $GI $GN $E1 $E2 $V1 $V2 $V3 $V4 $V5 $V6 $V7 $P1 deft/e2e e2e_drun $@
+
+if [ \( ! "$DOCKER_CERT_PATH" -o ! "$DOCKER_HOST" -o ! "$DOCKER_TLS_VERIFY" \) -a \( $(id -u) -ne 0 \) ] ; then
+  SUDO="sudo "
+else
+  unset SUDO
+fi
+${SUDO}docker run -it $UI $UN $GI $GN $E1 $E2 $V1 $V2 $V3 $V4 $V5 $V6 $V7 $P1 deft/e2e e2e.sh $3 $4
 

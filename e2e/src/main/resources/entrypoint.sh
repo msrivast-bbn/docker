@@ -5,6 +5,7 @@ if [ -f /already -a "${OK}X" = "X" ]; then
   done
 fi
 touch /already
+export PATH=${SPARK_HOME}/bin:${E2E_HOME}/bin:${PATH}
 USERNAME=${LOCAL_USER_NAME:-9001}
 USER_ID=${LOCAL_USER_ID:-9001}
 GROUPNAME=${LOCAL_GROUP_NAME:-9001}

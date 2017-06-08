@@ -1,4 +1,5 @@
 #!/bin/bash
+# Script run within the docker container to start the actual E2E Run.
 set -eu
 set -o pipefail
 
@@ -18,10 +19,8 @@ if [[ $# -ne 2 ]]; then
 	echo "Exiting"
 	exit 1
 fi
-e2e_config="$1"
-input_dir="$2"
-num_partitions="$3"
-num_executors="$4"
+num_partitions="$1"
+num_executors="$2"
 
 log() {
 	echo ">>> $1"
@@ -36,26 +35,20 @@ fi
 
 source ${E2E_HOME}/etc/site_config
 
-if [ "/e2e_config"X == "X" ]; then
-  echo '/e2e_config is not defined in site_config'
+if [ ! -e /sharedData ]; then
+  echo "The Shared Data directory \"/sharedData\" does not exist in the container"
   echo Exiting
   exit 1
 fi
 
-if [ ! -e "/e2e_config" ]; then
-  echo "\/e2e_config \"/e2e_config\" does not exist"
+if [ ! -d /sharedData ]; then
+  echo "The Shared Data directory \"/sharedData\" is not a directory"
   echo Exiting
   exit 1
 fi
 
-if [ ! -d "/e2e_config" ]; then
-  echo "\/e2e_config \"/e2e_config\" is not a directory"
-  echo Exiting
-  exit 1
-fi
-
-if [ ! -w "/e2e_config" ]; then
-  echo "\/e2e_config \"/e2e_config\" is not writable"
+if [ ! -w "/sharedData" ]; then
+  echo "The Shared Data directory \"/sharedData\" is not writable"
   echo Exiting
   exit 1
 fi
@@ -64,11 +57,11 @@ fi
 timestamp="$(date +%s)"
 log "the UTC timestamp / id of this script execution is ${timestamp}"
 
-log "processing ${e2e_config}"
+log "e2e preparation started"
 e2e_config_shared_directory="/sharedData/$(id -un)"
 mkdir -p "${e2e_config_shared_directory}"
 e2e_config_shared="${e2e_config_shared_directory}/e2e_config_${timestamp}.xml"
-cp "${e2e_config}" "${e2e_config_shared}"
+cp "/e2e_config" "${e2e_config_shared}"
 for e2e_config_attribute in "metadata_host" "metadata_port" "metadata_db" "metadata_user_name" "metadata_password" "corpus_id" "kb_report_output_dir" "gather_statistics" "stats_file_path"; do
 	attribute_value="$(python -c "import re; print re.compile(\"<entry key=\\\"${e2e_config_attribute}\\\">(.*?)</entry>\").findall(open(\"${e2e_config_shared}\").read())[0]")"
 	declare "${e2e_config_attribute}"="${attribute_value}"
