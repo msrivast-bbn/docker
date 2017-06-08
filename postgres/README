@@ -1,4 +1,4 @@
-# Examplem command:
+# Example command:
 docker run -d --name=postgres7900 --restart=always --env POSTGRES_PASSWORD=password -p 7900:5432 deft/postgres postgres
 env options:
 POSTGRES_PASSWORD : Sets the superuser password for the initial database at the
@@ -19,3 +19,5 @@ POSTGRES_INITDB_XLOGDIR : Select a different directory to store transaction logs
                     Default is $PGDATA/pg_xlog
 
 See https://github.com/docker-library/docs/tree/master/postgres for more information.
+
+To test that the docker container is working, add it as a server in pgAdmin and verify that you can connect to it.
