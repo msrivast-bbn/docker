@@ -1,4 +1,7 @@
-# Example command (depending on your system configuration you may need to prefix this with sudo):
+# One time command to load the image (depending on your system configuration you may need to prefix this with sudo)
+docker load < postgresql-9.6.tgz
+
+# Example command to run a container (depending on your system configuration you may need to prefix this with sudo):
 docker run -d --name=postgres7900 --restart=always --env POSTGRES_PASSWORD=password -p 7900:5432 deft/postgres postgres
 
 env options:
