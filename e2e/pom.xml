@@ -65,28 +65,6 @@
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>3.0.0</version>
                 <executions>
-<!--
-                    <execution>
-                      <id>unpack-e2e</id>
-                      <phase>prepare-package</phase>
-                      <goals>
-                          <goal>unpack</goal>
-                      </goals>
-                      <configuration>
-                          <artifactItems>
-                              <artifactItem>
-                                <groupId>adept</groupId>
-                                <artifactId>adept-e2e</artifactId>
-                                <version>${project.version}</version>
-                                <classifier>bin</classifier>
-                                <type>zip</type>
-                                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                                <includes>**/DEFT KB create schema.txt</includes>
-                              </artifactItem>
-                          </artifactItems>
-                      </configuration>
-                    </execution>
--->
                     <execution>
                       <id>copy-e2e</id>
                       <phase>prepare-package</phase>
@@ -122,7 +100,7 @@
                         <configuration>
                           <images>
                             <image>
-                              <name>deft/e2e:%t</name>
+                              <name>deft/e2e:%l</name>
                               <build>
                                 <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
                               </build>
@@ -140,6 +118,21 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <executions>
+                  <execution>
+                    <id>remove-latest</id>
+                    <goals>
+                      <goal>exec</goal>
+                    </goals>
+                    <phase>prepare-package</phase>
+                    <configuration>
+                      <workingDirectory>${project.build.directory}</workingDirectory>
+                      <executable>docker</executable>
+                      <arguments>
+                        <argument>rmi</argument>
+                        <argument>deft/e2e:latest</argument>
+                      </arguments>
+                    </configuration>
+                  </execution>
                   <execution>
                     <id>chmod-rune2e</id>
                     <goals>

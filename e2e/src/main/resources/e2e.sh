@@ -12,15 +12,16 @@ trap '
 	fi' \
 EXIT
 
-if [[ $# -ne 2 ]]; then
-	echo "Usage: $(basename $0) <num partitions> <num executors>"
+if [[ $# -ne 3 ]]; then
+	echo "Usage: $(basename $0) <inpur dir path> <num partitions> <num executors>"
 	echo "e.g.:"
-	echo "  $(basename $0) 1 1"
+	echo "  $(basename $0) ~/input 1 1"
 	echo "Exiting"
 	exit 1
 fi
-num_partitions="$1"
-num_executors="$2"
+input_dir="$1"
+num_partitions="$2"
+num_executors="$3"
 
 log() {
 	echo ">>> $1"
@@ -78,14 +79,7 @@ hadoop fs -put "/input" "${input_dir_hdfs}"
 output_dir_hdfs="e2e_output_${timestamp}"
 spark_eventLog_dir_hdfs="hdfs:///user/$(id -un)/spark_logs/spark_logs_${timestamp}"
 hadoop fs -mkdir -p "${spark_eventLog_dir_hdfs}"
-mkdir -p "${kb_report_output_dir}/${corpus_id}"
-if [[ "${gather_statistics}" == "true" ]]; then
-	if [ ! -f "${stats_file_path}" ]; then
-		touch "${stats_file_path}"
-	fi
-	chmod 777 "${stats_file_path}"
-fi
-find "${kb_report_output_dir}" -type d -exec chmod 777 {} +
+
 log "running spark-submit"
 ${SPARK_HOME}/bin/spark-submit \
 	--driver-memory 80g \
@@ -107,7 +101,7 @@ ${SPARK_HOME}/bin/spark-submit \
         --deploy-mode ${deploymode:-cluster} \
 	--queue pool1 \
 	--conf spark.storage.blockManagerTimeoutInterval=100000 \
-	"${E2E_HOME}/lib/adept-e2e.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find ${input_dir} -maxdepth 1 -type f | wc -l)" "${e2e_config_shared}"
+	"${E2E_HOME}/lib/adept-e2e.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find /input -maxdepth 1 -type f | wc -l)" "${e2e_config_shared}"
 
 log "downloading output directory from hdfs"
 hadoop fs -get "${output_dir_hdfs}"
