@@ -100,15 +100,16 @@
                         <configuration>
                           <images>
                             <image>
-                              <name>deft/e2e:%l</name>
+                              <name>deft/e2e:%t</name>
                               <build>
                                 <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
+                                <tags>
+                                  <tag>latest</tag>
+                                </tags>
                               </build>
                             </image>
                           </images>
-                          <tags>
-                            <tag>latest</tag>
-                          </tags>
+                          <verbose>true</verbose>
                         </configuration>
                     </execution>
                 </executions>
@@ -118,6 +119,27 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <executions>
+                  <!--
+                       This is a violation of all that is Maven. We need to get these into 
+                       the nexus via a raw repository. 
+                       The downloads for these started to become unreliable, so we are locally
+                       'caching' them.
+                  -->
+                  <execution>
+                    <id>copy-repo</id>
+                    <goals>
+                      <goal>exec</goal>
+                    </goals>
+                    <phase>prepare-package</phase>
+                    <configuration>
+                      <executable>cp</executable>
+                      <arguments>
+                        <argument>/nfs/mercury-09/u28/jgriffit/repo/spark-2.0.0-bin-hadoop2.6.tgz</argument>
+                        <argument>/nfs/mercury-09/u28/jgriffit/repo/gosu-amd64</argument>
+                        <argument>${project.build.outputDirectory}</argument>
+                      </arguments>
+                    </configuration>
+                  </execution>
                   <execution>
                     <id>remove-latest</id>
                     <goals>
@@ -129,8 +151,13 @@
                       <executable>docker</executable>
                       <arguments>
                         <argument>rmi</argument>
+                        <argument>-f</argument>
                         <argument>deft/e2e:latest</argument>
                       </arguments>
+                      <successCodes>
+                        <successCode>0</successCode>
+                        <successCode>1</successCode>
+                      </successCodes>
                     </configuration>
                   </execution>
                   <execution>

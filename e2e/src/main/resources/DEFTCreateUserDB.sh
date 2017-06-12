@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function help() {
-  echo "$(basename $0) <e2e_config file path>"
+  echo "$(basename $0) <e2e_config file path> <site_config file path>"
 }
 
 function createDB() {
@@ -17,24 +17,22 @@ GRANT ALL ON SCHEMA public TO ${metadata_user_name};
 EOF
 }
 
-if [ $# -ne 1 ]; then
+if [ $# -ne 2 ]; then
   help
   exit 1
 fi
 
-if [ ! -r $1 ]; then
-  echo "e2e configuration file \"$1\" does not exist or is not readable"
+if [ ! -r $1 -o ! -f $1 ]; then
+  echo "e2e configuration file \"$1\" does not exist, is not a file or is not readable"
   exit 1
 fi
 
-basedir=$(dirname $(dirname $0))
-if [ ! -r ${basedir}/etc/site_config ]; then
-  echo "${basedir}/etc/site_config does not exist or is not readable"
-  echo Exiting
+if [ ! -r $2 ]; then
+  echo "site configuration file \"$2\" does not exist, is not a file or is not readable"
   exit 1
 fi
 
-source ${basedir}/etc/site_config
+source $2
 
 e2e_config=$1
 for e2e_config_attribute in "metadata_host" "metadata_port" "metadata_db" "metadata_user_name" "metadata_password" "corpus_id" "kb_report_output_dir" "gather_statistics" "stats_file_path"; do

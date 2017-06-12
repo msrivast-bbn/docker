@@ -52,41 +52,44 @@ if [ ! -d ${CONF}/spark -o ! -r ${CONF}/spark ] ; then
   errexit "ERROR: Spark Configuration Directory \"${CONF}/spark\" does not exist, is not a directory, or is not readable"
 fi
 if [ ! -f ${CONF}/site_config -o ! -r ${CONF}/site_config ] ; then
-  errexit "ERROR: E2E Site Configuration File \"${CONF}/site_config\" does not exist, is not a directory, or is not readable"
+  errexit "ERROR: E2E Site Configuration File \"${CONF}/site_config\" does not exist, is not a file, or is not readable"
 fi
+# $1 e2e config file
 if [ ! -f ${1} -o ! -r ${1} ] ; then
   errexit "ERROR: E2E Configuration File \"${1}\" does not exist, is not a file, or is not readable"
 fi
 e2e_config=$(readlink -f ${1}) # convert to absolute path name
+# $2 input data directory
 if [ ! -d ${2} -o ! -r ${2} ] ; then
   errexit "ERROR: E2E Input Data Directory \"${2}\" does not exist, is not a directory, or is not readable"
 fi
-shared_top=$(readlink -f ${2})
+# $3 partitions
 if ! [[ ${3} =~ ^[0-9]+$ ]] ; then
   errexit "ERROR: number of partitions value \"${3}\" is not an integer value"
 fi
+# $4 executors
 if ! [[ ${4} =~ ^[0-9]+$ ]] ; then
   errexit "ERROR: number of executors value \"${4}\" is not an integer value"
 fi
 
 source ${CONF}/site_config
-[ "${shared_top}" ] || errexit "ERROR: the \"shared_top\" variable is not defined in the \"${CONF}/shared_config\" file"
+[ "${shared_top}" ] || errexit "ERROR: the \"shared_top\" variable is not defined in the \"${CONF}/site_config\" file"
 if [ ! -d ${shared_top} -o ! -r ${shared_top} ] ; then
   errexit "ERROR: The E2E Shared Directory \"${shared_top}\" does not exist, is not a directory, or is not readable"
 fi
 shared_top=$(readlink -f ${shared_top})
-unset V1 V2 V3 V4 V5 V6 V7 P1
-V1=" -v ${CONF}/hadoop:/etc/hadoop/conf.shared"
-V2=" -v ${CONF}/spark:/var/lib/spark-2.0.0-hadoop2.6/conf"
-V3=" -v ${shared_top}:/sharedData"
-V4=" -v $(readlink -f ${1}):/e2e_config"
-V5=" -v $(readlink -f ${2}):/input"
-V6=" -v ${CONF}/site_config:/var/lib/adept-e2e/etc/site_config"
-V7=" -v $(readlink -f ${PWD}):/output"
-P1=" -p 4040:4040"
-unset E1 E2
+unset V1 V2 V3 V4 V5 V6 P1
+V1=" -v ${CONF}:/conf"
+V2=" -v ${shared_top}:/sharedData"
+V3=" -v $(readlink -f ${1}):/e2e_config"
+V4=" -v $(readlink -f ${2}):/input"
+V5=" -v ${CONF}/site_config:/var/lib/adept-e2e/etc/site_config"
+V6=" -v $(readlink -f ${PWD}):/output"
+P1=" -p :4040"
+unset E1 E2 E3
 [ "${deploymode}" ] && E1="-e deploymode=${deploymode}"
 [ "${master}" ] && E2="-e master=${master}"
+E3="-e shared_top=${shared_top}"
 
 if [ \( ! "$DOCKER_CERT_PATH" -o ! "$DOCKER_HOST" -o ! "$DOCKER_TLS_VERIFY" \) -a \( $(id -u) -ne 0 \) ] ; then
   SUDO="sudo "
@@ -109,5 +112,5 @@ if [[ "${gather_statistics}" == "true" ]]; then
 fi
 find "${kb_report_output_dir}" -type d -exec chmod 777 {} \;
 # Next Phase - start the container and continue processing
-${SUDO}docker run -it $UI $UN $GI $GN $E1 $E2 $V1 $V2 $V3 $V4 $V5 $V6 $V7 $P1 deft/e2e e2e.sh $2 $3 $4
+${SUDO}docker run -it $UI $UN $GI $GN $E1 $E2 $E3 $V1 $V2 $V3 $V4 $V5 $V6 $P1 deft/e2e e2e.sh $2 $3 $4
 

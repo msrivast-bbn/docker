@@ -28,28 +28,34 @@ log() {
 }
 
 E2E_HOME=$(dirname $(dirname $0))
-if [ ! -r ${E2E_HOME}/etc/site_config ]; then
-  echo "${E2E_HOME}/etc/site_config does not exist or is not readable"
+if [ ! -r /conf/site_config ]; then
+  echo "/conf/site_config does not exist or is not readable"
   echo Exiting
   exit 1
 fi
 
-source ${E2E_HOME}/etc/site_config
+source /conf/site_config
 
-if [ ! -e /sharedData ]; then
-  echo "The Shared Data directory \"/sharedData\" does not exist in the container"
+if [ ! -e ${shared_top} ]; then
+  echo "The Shared Data directory \"${shared_top}\" does not exist in the container"
   echo Exiting
   exit 1
 fi
 
-if [ ! -d /sharedData ]; then
-  echo "The Shared Data directory \"/sharedData\" is not a directory"
+if [ ! -d ${shared_top} ]; then
+  echo "The Shared Data directory \"${shared_top}\" is not a directory"
   echo Exiting
   exit 1
 fi
 
-if [ ! -w "/sharedData" ]; then
-  echo "The Shared Data directory \"/sharedData\" is not writable"
+if [ ! -w "${shared_top}" ]; then
+  echo "The Shared Data directory \"${shared_top}\" is not writable"
+  echo Exiting
+  exit 1
+fi
+
+if [ ! -d "/conf" ]; then
+  echo "The Configuration directory \"/conf\" is not a directory or does not exist"
   echo Exiting
   exit 1
 fi
@@ -59,7 +65,7 @@ timestamp="$(date +%s)"
 log "the UTC timestamp / id of this script execution is ${timestamp}"
 
 log "e2e preparation started"
-e2e_config_shared_directory="/sharedData/$(id -un)"
+e2e_config_shared_directory="${shared_top%/}/$(id -un)"
 mkdir -p "${e2e_config_shared_directory}"
 e2e_config_shared="${e2e_config_shared_directory}/e2e_config_${timestamp}.xml"
 cp "/e2e_config" "${e2e_config_shared}"
@@ -81,10 +87,17 @@ spark_eventLog_dir_hdfs="hdfs:///user/$(id -un)/spark_logs/spark_logs_${timestam
 hadoop fs -mkdir -p "${spark_eventLog_dir_hdfs}"
 
 log "running spark-submit"
+set -xv
+S211jp="msrivast_serif_deliverable/scala_2_11/scala-library-2.11.8.jar"
+S210jp="msrivast_serif_deliverable/scala_2_10/2.10.6/scala-library-2.10.6.jar"
+EAS="${shared_top}/e2e_artifacts/e2e_external_classpath"
+EACP="${EAS}/*:${EAS}/classes"
+EXT_CP="${shared_top}/${S211jp}:${shared_top}/${S210jp}:${EACP}
+
 ${SPARK_HOME}/bin/spark-submit \
-	--driver-memory 80g \
-	--executor-memory 80g \
-	--conf spark.executor.extraClassPath="${e2e_config_shared_top}/msrivast_serif_deliverable/scala_2_11/scala-library-2.11.8.jar:${e2e_config_shared_top}/u40/msrivast_serif_deliverable/scala_2_10/2.10.6/scala-library-2.10.6.jar" \
+	--driver-memory ${driver_memory:-"80g"} \
+	--executor-memory ${executor_memory:-"80g"} \
+	--conf spark.executor.extraClassPath="${EXT_CP}" \
 	--conf spark.driver.cores=5 \
 	--conf spark.eventLog.enabled=true \
 	--conf spark.eventLog.dir="${spark_eventLog_dir_hdfs}" \
@@ -112,3 +125,4 @@ rm "${e2e_config_shared}"
 
 log "spark.eventLog.dir: ${spark_eventLog_dir_hdfs}"
 log "wrote output to local directory: ${output_dir_hdfs}"
+
