@@ -9,7 +9,7 @@ ENV SPARK_TGZ=spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz \
     PATH=$E2E_HOME/bin:$SPARK_HOME/bin:$JRE_HOME/bin:$JAVA_HOME/bin:$PATH \
     JRE_HOME=$JAVA_HOME/jre
 
-COPY entrypoint.sh gosu-amd64 spark-2.0.0-bin-hadoop2.6.tgz e2e.sh adept-e2e-bin.zip /
+COPY entrypoint.sh gosu-amd64 spark-2.0.0-bin-hadoop2.6.tgz e2e.sh adept-e2e-bin.zip LICENSE.txt THIRD_PARTY.txt /
 
 # default version of python is 2.7
 # initial installs

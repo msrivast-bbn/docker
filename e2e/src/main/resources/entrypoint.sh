@@ -1,19 +1,26 @@
 #!/bin/bash
-if [ -f /already -a "${OK}X" = "X" ]; then
-  while true; do
-    sleep 30
-  done
-fi
-touch /already
 # set up the shared data path while running as root
 if [ "${shared_top}" ] ; then
   mkdir -p $(dirname ${shared_top})
   ln -sf /sharedData ${shared_top}
 fi
 # copy hadoop and spark configurations
-export HADOOP_CONF_DIR=/conf/hadoop
-export SPARK_CONF_DIR=/conf/spark
-echo "export SPARK_DIST_CLASSPATH=$(hadoop classpath)" >> ${SPARK_HOME}/conf/spark-env.sh
+export HADOOP_CONF_DIR=/hadoop
+export SPARK_CONF_DIR=/spark
+mkdir /hadoop
+mkdir /spark
+cp -R /conf/hadoop/* /hadoop
+cp -R /conf/spark/* /spark
+if [ ! -f ${SPARK_CONF_DIR}/spark-env.sh ]; then
+  if [ -f ${SPARK_CONF_DIR}/spark-env.sh.template ] ; then
+    cp ${SPARK_CONF_DIR}/spark-env.sh.template ${SPARK_CONF_DIR}/spark-env.sh
+  fi
+fi
+echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:$(hadoop classpath)" >> ${SPARK_CONF_DIR}/spark-env.sh
+echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top}/e2e_artifacts/e2e_external_classpath/*" >> ${SPARK_CONF_DIR}/spark-env.sh
+echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top}/e2e_artifacts/e2e_external_classpath/classes" >> ${SPARK_CONF_DIR}/spark-env.sh
+tail  ${SPARK_CONF_DIR}/spark-env.sh
+ls /conf/spark
 # set up environment for running as requesting user
 export PATH=${SPARK_HOME}/bin:${E2E_HOME}/bin:${PATH}
 USERNAME=${LOCAL_USER_NAME:-9001}

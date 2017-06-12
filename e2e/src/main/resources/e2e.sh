@@ -13,7 +13,7 @@ trap '
 EXIT
 
 if [[ $# -ne 3 ]]; then
-	echo "Usage: $(basename $0) <inpur dir path> <num partitions> <num executors>"
+	echo "Usage: $(basename $0) <input dir path> <num partitions> <num executors>"
 	echo "e.g.:"
 	echo "  $(basename $0) ~/input 1 1"
 	echo "Exiting"
@@ -87,18 +87,16 @@ spark_eventLog_dir_hdfs="hdfs:///user/$(id -un)/spark_logs/spark_logs_${timestam
 hadoop fs -mkdir -p "${spark_eventLog_dir_hdfs}"
 
 log "running spark-submit"
-set -xv
-S211jp="msrivast_serif_deliverable/scala_2_11/scala-library-2.11.8.jar"
-S210jp="msrivast_serif_deliverable/scala_2_10/2.10.6/scala-library-2.10.6.jar"
 EAS="${shared_top}/e2e_artifacts/e2e_external_classpath"
-EACP="${EAS}/*:${EAS}/classes"
-EXT_CP="${shared_top}/${S211jp}:${shared_top}/${S210jp}:${EACP}"
+EXT_CP="${EAS}/*:${EAS}/classes"
 
+set -v
 ${SPARK_HOME}/bin/spark-submit \
 	--driver-memory ${driver_memory:-"80g"} \
 	--executor-memory ${executor_memory:-"80g"} \
-	--conf spark.executor.extraClassPath="${EXT_CP}" \
 	--conf spark.driver.cores=5 \
+        --conf spark.executor.extraClassPath="${EXT_CP}" \
+        --conf spark.driver.extraClassPath="${EXT_CP}" \
 	--conf spark.eventLog.enabled=true \
 	--conf spark.eventLog.dir="${spark_eventLog_dir_hdfs}" \
 	--conf spark.ui.killEnabled=true \
@@ -115,7 +113,7 @@ ${SPARK_HOME}/bin/spark-submit \
 	--queue pool1 \
 	--conf spark.storage.blockManagerTimeoutInterval=100000 \
 	"${E2E_HOME}/lib/adept-e2e.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find /input -maxdepth 1 -type f | wc -l)" "${e2e_config_shared}"
-
+set +v
 log "downloading output directory from hdfs"
 hadoop fs -get "${output_dir_hdfs}"
 

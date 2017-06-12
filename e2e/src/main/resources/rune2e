@@ -24,6 +24,7 @@ see THIRD-PARTY.txt for a list of the libraries and their licenses.
 -------------------------------------------------------------------------------
 
 EOF
+}
 
 function help {
   ( >&2 echo "$1 <e2e_config file> <input_directory> <num_partitions> <num_executors>")
@@ -63,7 +64,7 @@ if [ "${CONF}" ] ; then
 else
   CONF=$(readlink -f ${HOME}/e2e)
   [ ! -d ${CONF} ] && CONF=$(readlink -f /etc/e2e)
-  if [ ! -d ${CONF} -o ! -r ${CONF}] ; then
+  if [ ! -d ${CONF} -o ! -r ${CONF} ] ; then
     ( errexit "ERROR: Configuration Directories \"${HOME}/e2e\" and \"/etc/e2e\" do not exist, are not directories, or are not readable")
   fi
 fi
@@ -99,7 +100,7 @@ source ${CONF}/site_config
 if [ ! -d ${shared_top} -o ! -r ${shared_top} ] ; then
   errexit "ERROR: The E2E Shared Directory \"${shared_top}\" does not exist, is not a directory, or is not readable"
 fi
-shared_top=$(readlink -f ${shared_top})
+shared_top=${shared_top%/}
 unset V1 V2 V3 V4 V5 V6 P1
 V1=" -v ${CONF}:/conf"
 V2=" -v ${shared_top}:/sharedData"
@@ -136,5 +137,6 @@ find "${kb_report_output_dir}" -type d -exec chmod 777 {} \;
 # print the license
 printLicense
 # Next Phase - start the container and continue processing
-${SUDO}docker run -it $UI $UN $GI $GN $E1 $E2 $E3 $V1 $V2 $V3 $V4 $V5 $V6 $P1 deft/e2e e2e.sh $2 $3 $4
+echo "${SUDO}docker run -it $UI $UN $GI $GN $E1 $E2 $E3 $V1 $V2 $V3 $V4 $V5 $V6 $P1 deft/e2e e2e.sh $2 $3 $4" | tee /tmp/cmd
+${SUDO}docker run -it --rm $UI $UN $GI $GN $E1 $E2 $E3 $V1 $V2 $V3 $V4 $V5 $V6 $P1 deft/e2e e2e.sh $2 $3 $4
 
