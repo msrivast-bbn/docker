@@ -92,7 +92,7 @@ S211jp="msrivast_serif_deliverable/scala_2_11/scala-library-2.11.8.jar"
 S210jp="msrivast_serif_deliverable/scala_2_10/2.10.6/scala-library-2.10.6.jar"
 EAS="${shared_top}/e2e_artifacts/e2e_external_classpath"
 EACP="${EAS}/*:${EAS}/classes"
-EXT_CP="${shared_top}/${S211jp}:${shared_top}/${S210jp}:${EACP}
+EXT_CP="${shared_top}/${S211jp}:${shared_top}/${S210jp}:${EACP}"
 
 ${SPARK_HOME}/bin/spark-submit \
 	--driver-memory ${driver_memory:-"80g"} \
