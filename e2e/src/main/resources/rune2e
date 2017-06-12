@@ -3,6 +3,23 @@
 # Script run on the dockerd host to start the E2E Container.
 set -xv
 
+function printLicense {
+  cat <<-"EOF"
+Copyright © 2012-2017 Raytheon BBN Technologies, Inc.
+Cambridge, MA USA
+All rights reserved.
+
+This program and associated material contains information whose export or 
+disclosure to Non-U.S. Persons, wherever located, is subject to the Export 
+Administration Regulations (EAR) (15 C.F.R. §730-774). Specifically,
+Raytheon BBN Technologies conducted an internal review and determined that this 
+information is export controlled as EAR99. Exports contrary to U.S. law are
+prohibited.
+
+-------------------------------------------------------------------------------
+
+EOF
+
 function help {
   ( >&2 echo "$1 <e2e_config file> <input_directory> <num_partitions> <num_executors>")
   exit $2
@@ -111,6 +128,8 @@ if [[ "${gather_statistics}" == "true" ]]; then
   chmod 777 "${stats_file_path}"
 fi
 find "${kb_report_output_dir}" -type d -exec chmod 777 {} \;
+# print the license
+printLicense
 # Next Phase - start the container and continue processing
 ${SUDO}docker run -it $UI $UN $GI $GN $E1 $E2 $E3 $V1 $V2 $V3 $V4 $V5 $V6 $P1 deft/e2e e2e.sh $2 $3 $4
 
