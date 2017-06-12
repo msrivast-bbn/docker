@@ -9,5 +9,11 @@ Raytheon BBN Technologies conducted an internal review and determined that this
 information is export controlled as EAR99. Exports contrary to U.S. law are
 prohibited.
 
+As part of the DEFT effort, BBN SERIF(TM) is being provided with Government
+Purpose Rights. Please see DFARS 252.227-7014 for details.
+
+Various third-party libraries are incorporated into this application. Please
+see THIRD-PARTY.txt for a list of the libraries and their licenses.
+
 -------------------------------------------------------------------------------
 
