@@ -16,7 +16,7 @@ COPY entrypoint.sh gosu-amd64 spark-2.0.0-bin-hadoop2.6.tgz e2e.sh adept-e2e-bin
 RUN apt-get update -y && \
     apt-get upgrade -y  && \
     apt-get install -y apt-utils && \
-    apt-get install -y curl wget python perl libterm-readline-gnu-perl openjdk-8-jdk unzip ssh && \
+    apt-get install -y curl wget python perl libterm-readline-gnu-perl openjdk-8-jdk unzip ssh vim vim-fugitive emacs && \
     echo 'deb http://apt.postgresql.org/pub/repos/apt xenial-pgdg main' >/etc/apt/sources.list.d/postgresql.list && \
     chmod 644 /etc/apt/sources.list.d/postgresql.list && \
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
