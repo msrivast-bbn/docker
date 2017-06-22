@@ -57,84 +57,52 @@ unset IFS
 
 # Check for or set SPARK_CONF_DIR
 if [ ! "${SPARK_CONF_DIR}" ] ; then
-  if [ ! "${SPARK_HOME}" ] ; then
-    if [ -d /etc/spark/conf ] ; then
-      SPARK_CONF_DIR=/etc/spark/conf
-    fi
-    S=$(type -p spark-submit)
-    if [ $? -ne 0 -a ! -d /etc/spark/conf ] ; then
-      errexit "ERROR: cannot identify SPARK_CONF_DIR or SPARK_HOME or find spark-submit in your path."
-    fi
-    SPARK_HOME=${S%%/bin/spark-submit}
-    unset S
-    if [ "${SPARK_HOME}" = /usr -o "${SPARK_HOME}" = / -o "${SPARK_HOME}X" = X ] ; then
-      unset SPARK_HOME
-    else
-      if [ -d ${SPARK_HOME}/conf -a -r ${SPARK_HOME}/conf ] ; then
-        SPARK_CONF_DIR=${SPARK_HOME}/conf
-      else
-        errexit "ERROR: cannot identify SPARK_CONF_DIR (conf) under SPARK_HOME "${SPARK_HOME}" or in /etc/spark"
-      fi
-    fi
-  else
+  if [ "${SPARK_HOME}" ] ; then
     if [ -d ${SPARK_HOME}/conf -a -r ${SPARK_HOME}/conf ] ; then
       SPARK_CONF_DIR=${SPARK_HOME}/conf
-    else
-      if [ -d /etc/spark/conf -a -r /etc/spark/conf ] ; then
-        SPARK_CONF_DIR=/etc/spark/conf
-      else
-        errexit "ERROR: cannot identify SPARK_CONF_DIR (conf) under SPARK_HOME "${SPARK_HOME}" or in /etc/spark/conf"
-      fi
     fi
   fi
+  for SCD in /etc/spark/conf ~/spark/conf /var/lib/spark/conf; do
+    if [ -d $SCD -a -r $SCD ]; then
+      SPARK_CONF_DIR="$SCD"
+      break
+    fi
+  done
 fi
 if [ ! "${SPARK_CONF_DIR}" ] ; then
   errexit "ERROR: SPARK_CONF_DIR is not defined and cannot be guessed"
 fi
+if [ ! -e "${SPARK_CONF_DIR}" ] ; then
+  errexit "ERROR: SPARK_CONF_DIR does not exist"
+fi
 if [ ! -d "${SPARK_CONF_DIR}" ] ; then
-  errexit "ERROR: cannot find SPARK_CONF_DIR (conf) under SPARK_HOME "${SPARK_HOME}" or in /etc/spark/conf"
+  errexit "ERROR: SPARK_CONF_DIR is not a directory"
 fi
 if [ ! -r "${SPARK_CONF_DIR}" ] ; then
   errexit "ERROR: SPARK_CONF_DIR (${SPARK_CONF_DIR}) found but is not readable"
 fi
 # Check for or set HADOOP_CONF_DIR
 if [ ! "${HADOOP_CONF_DIR}" ] ; then
-  if [ ! "${HADOOP_HOME}" ] ; then
-    if [ -d /etc/hadoop/conf -a -r /etc/hadoop/conf ] ; then
-      HADOOP_CONF_DIR=/etc/hadoop/conf
-    fi
-    S=$(type -p hadoop)
-    if [ $? -ne 0 -a ! -d /etc/hadoop/conf ] ; then
-      errexit "ERROR: cannot identify HADOOP_CONF_DIR or HADOOP_HOME or find hadoop in your path."
-    fi
-    HADOOP_HOME=${S%%/bin/hadoop}
-    unset S
-    if [ "${HADOOP_HOME}" = /usr -o "${HADOOP_HOME}" = / -o "${HADOOP_HOME}X" = X ] ; then
-      unset HADOOP_HOME
-    else
-      if [ -d "${HADOOP_HOME}/conf" -a -r "${HADOOP_HOME}/conf" ] ; then
-        HADOOP_CONF_DIR="${HADOOP_HOME}/conf"
-      else
-        errexit "ERROR: cannot identify HADOOP_CONF_DIR (conf) under HADOOP_HOME \"${HADOOP_HOME}\" or in /etc/hadoop"
-      fi
-    fi
-  else
-    if [ -d "${HADOOP_HOME}/conf" -a -r "${HADOOP_HOME}/conf" ] ; then
-      HADOOP_CONF_DIR="${HADOOP_HOME}/conf"
-    else
-      if [ -d /etc/hadoop/conf -a -r /etc/hadoop/conf ] ; then
-        HADOOP_CONF_DIR=/etc/hadoop/conf
-      else
-        errexit "ERROR: cannot identify HADOOP_CONF_DIR (conf) under HADOOP_HOME \"${HADOOP_HOME}\" or in /etc/hadoop/conf"
-      fi
+  if [ "${HADOOP_HOME}" ] ; then
+    if [ -d "$HADOOP_HOME/conf" -a -r "$HADOOP_HOME/conf" ] ; then
+      HADOOP_CONF_DIR="$HADOOP_HOME/conf"
     fi
   fi
+  for HCD in /etc/hadoop/conf ~/hadoop/conf /var/lib/hadoop/conf; do
+    if [ -d $SCD -a -r $SCD ]; then
+      HADOOP_CONF_DIR="$SCD"
+      break
+    fi
+  done
 fi
 if [ ! "${HADOOP_CONF_DIR}" ] ; then
   errexit "ERROR: HADOOP_CONF_DIR is not defined and cannot be guessed"
 fi
+if [ ! -e "${HADOOP_CONF_DIR}" ] ; then
+  errexit "ERROR: HADOOP_CONF_DIR does not exist"
+fi
 if [ ! -d "${HADOOP_CONF_DIR}" ] ; then
-  errexit "ERROR: cannot identify HADOOP_CONF_DIR (conf) under HADOOP_HOME \"${HADOOP_HOME}\" or in /etc/hadoop/conf"
+  errexit "ERROR: HADOOP_CONF_DIR is not a directory"
 fi
 if [ ! -r "${HADOOP_CONF_DIR}" ] ; then
   errexit "ERROR: HADOOP_CONF_DIR (${HADOOP_CONF_DIR}) found but is not readable"
