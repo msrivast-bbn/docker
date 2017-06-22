@@ -62,7 +62,7 @@ EXT_CP="$EAS/*:$EAS/classes"
 ${SPARK_HOME}/bin/spark-submit \
 	--driver-memory ${driver_memory:-80g} \
 	--executor-memory ${executor_memory:-80g} \
-	--conf spark.driver.cores=${driver_cores:-5} \
+	--conf spark.driver.cores=${driver_cores:-1} \
         --conf spark.executor.extraClassPath="${EXT_CP}" \
         --conf spark.driver.extraClassPath="${EXT_CP}" \
 	--conf spark.eventLog.enabled=${eventlog_enabled:-true} \
@@ -73,7 +73,7 @@ ${SPARK_HOME}/bin/spark-submit \
 	--conf spark.shuffle.blockTransferService=${shuffle_blocktransferservice:-nio} \
 	--conf spark.dynamicAllocation.enabled=${dynamic_allocation_enabled:-false} \
 	--conf spark.shuffle.service.enabled=${shuffle_service_enabled:-false} \
-	--conf spark.speculation=${speculation:-true} \
+	--conf spark.speculation=${speculation:-false} \
 	--conf spark.speculation.multiplier=${speculation_multiplier:-2} \
 	--class adept.e2e.driver.E2eDriver \
 	--master ${master:-yarn} \
