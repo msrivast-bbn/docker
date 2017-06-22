@@ -28,8 +28,28 @@ EOF
 }
 
 function help {
-  ( >&2 echo "$1 <a2kd_config file> <input_directory> <num_partitions> <num_executors>")
-  exit $2
+cat <<EOF
+a2kd
+
+$1 <a2kd_config file> <input_directory> <num_partitions> <num_executors>
+
+The $1 program executes an A2KD analysis over the provided corpus using the
+parameters specified on the command line and in the configuration file.
+
+This program requires access to the HADOOP and the Spark configuration
+directories in order to function properly. If the standard environment
+variables (HADOOP_CONF_DIR and SPARK_CONF_DIR) are not defined, the program
+wil look for them at /etc/{spark,hadoop}/conf and at $HOME/{hadoop,spark}/conf.
+If these directories cannot be found and the environment variables are not defined,
+the program will fail. If you have these directories in a non-standard location, the
+environment variables can easily be defined on the command line:
+
+SPARK_CONF_DIR=/share/spark/conf HADOOP_CONF_DIR=/share/hadoop/conf $1 a2kd_config input 5 5
+
+The parameters that must be defined in the configuration file are documented therein.
+
+EOF
+[ $# -eq 2 ] && exit $2
 }
 
 function errexit {
@@ -40,11 +60,11 @@ function errexit {
 
 # check for help
 if [ $# -eq 0 -o "$1" = "-h" -o "$1" = "--help" ]; then
-  help $0 0
+  help $(basename $0) 0
 fi
 if [ $# -ne 4 ]; then
   ( >&2 echo "ERROR: incorrect number of parameters")
-  help $0 1
+  help $(basename $0) 1
 fi
 
 # Set up identity variables
