@@ -8,11 +8,8 @@
       <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>postgresql</artifactId>
-    <version>8.4.20</version>
+    <version>9.6</version>
     <description>A Docker image with the PostgreSQL Server</description>
-    <!--
-         docker run -it -p 5432:xxxx deft/xxxx
-    -->
     <build>
         <plugins>
             <plugin>

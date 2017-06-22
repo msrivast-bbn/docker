@@ -5,23 +5,51 @@ docker load < postgresql-9.6.tgz
 docker run -d --name=postgres7900 --restart=always --env POSTGRES_PASSWORD=password -p 7900:5432 deft/postgres postgres
 
 env options:
-POSTGRES_PASSWORD : Sets the superuser password for the initial database at the
-                    initial run. NO DEFAULT!
-POSTGRES_USER     : Sets the superuser username for the initial database at the
-                    initial run. Defaults to 'postgres'.
-PGDATA            : Sets the location for the database.  Defaults to
-                    '/var/lib/postgresql/data', which should be fine for our
-                    purposes. If you are mounting a volume to hold the database
-                    on the host or a shared file system, then you should choose
-                    a directory under the default, such as
-                    '/var/lib/postgresql/data/mydata'.
-POSTGRES_DB       : Define the name for the default database. Defaults to the
-                    value of POSTGRES_USER.
-POSTGRES_INITDB_ARGS : A set of options and arguments to pass to postgres initdb.
-                    Example: --env POSTGRES_INITDB_ARGS="--locale=en_US.UTF8"
+POSTGRES_PASSWORD :       Sets the superuser password for the initial database at the
+                          initial run. NO DEFAULT! 
+                          WARNING: if no password is set in the run command, then the
+                          database will be set to 'trust' authentication mode and no
+                          passwords will be required for access locally. The image
+                          will still attempt to enable password authentication for
+                          network access.
+POSTGRES_USER     :       Sets the superuser username for the initial database at the
+                          initial run. Defaults to 'postgres'. Generally this is fine
+                          for A2KD.
+PGDATA            :       Sets the location for the database.  Defaults to
+                          '/var/lib/postgresql/data', which should be fine for A2KD
+                          purposes. If you are mounting a volume to hold the database
+                          on the host or a shared file system, then you should choose
+                          a directory under the default, such as
+                          '/var/lib/postgresql/data/mydata'.
+POSTGRES_DB       :       Define the name for the default database. Defaults to the
+                          value of POSTGRES_USER. Generally not used for A2KD.
+POSTGRES_INITDB_ARGS :    A set of options and arguments to pass to postgres initdb.
+                          Example: --env POSTGRES_INITDB_ARGS="--locale=en_US.UTF8"
 POSTGRES_INITDB_XLOGDIR : Select a different directory to store transaction logs.
-                    Default is $PGDATA/pg_xlog
+                          Default is $PGDATA/pg_xlog. Also not used for A2KD.
 
 See https://github.com/docker-library/docs/tree/master/postgres for more information.
 
-To test that the docker container is working, add it as a server in pgAdmin and verify that you can connect to it.
+To test that the docker container is working, add it as a server in pgAdmin and verify 
+that you can connect to it.
+
+Once the container has been created, it can be stopped and started using the Docker 
+stop and start commands:
+
+  docker stop postgres7900 
+
+  docker start postgres7900
+
+The container can be saved away as an image for backup purposes. To do this:
+
+  docker stop postgres7900
+  docker commit --message "Backup $(date)" postgres7900 deft/postgres7900-$(date +%y%m%d-%k%M%S)
+  docker start postgres7900
+
+The image created from this sequence can be saved to a tar file, moved to another 
+docker host, and loaded there:
+
+  docker save deft/postgres7900-170621-131422 | gzip >postgres7900-170621-131422.tgz
+  <move file to another host>
+  docker load -i postgres7900-170621-131422.tgz 
+

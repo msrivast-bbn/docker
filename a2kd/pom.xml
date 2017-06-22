@@ -52,7 +52,7 @@
                           <directory>${project.basedir}/src/main/resources</directory>
                           <filtering>true</filtering>
                           <includes>
-                            <include>rune2e</include>
+                            <include>runa2kd</include>
                           </includes>
                         </resource>
                       </resources>
@@ -74,7 +74,7 @@
                 <version>3.0.0</version>
                 <executions>
                     <execution>
-                      <id>copy-e2e</id>
+                      <id>copy-a2kd</id>
                       <phase>prepare-package</phase>
                       <goals>
                           <goal>copy</goal>
@@ -108,7 +108,7 @@
                         <configuration>
                           <images>
                             <image>
-                              <name>deft/e2e:%t</name>
+                              <name>deft/a2kd:%t</name>
                               <build>
                                 <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
                                 <tags>
@@ -160,7 +160,7 @@
                       <arguments>
                         <argument>rmi</argument>
                         <argument>-f</argument>
-                        <argument>deft/e2e:latest</argument>
+                        <argument>deft/a2kd:latest</argument>
                       </arguments>
                       <successCodes>
                         <successCode>0</successCode>
@@ -169,7 +169,7 @@
                     </configuration>
                   </execution>
                   <execution>
-                    <id>chmod-rune2e</id>
+                    <id>chmod-runa2kd</id>
                     <goals>
                       <goal>exec</goal>
                     </goals>
@@ -179,7 +179,7 @@
                       <executable>chmod</executable>
                       <arguments>
                         <argument>a+x</argument>
-                        <argument>rune2e</argument>
+                        <argument>runa2kd</argument>
                       </arguments>
                     </configuration>
                   </execution>

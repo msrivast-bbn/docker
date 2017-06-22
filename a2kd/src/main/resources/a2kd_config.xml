@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <comment>Config File for E2E System</comment>
+
+    <!-- Note: Avoid newlines in parameter values since they are not stripped by E2eDriver code-->
+
+    <!-- Algorithm Parameters-->
+    <!--============================================================================-->
+    <!-- Name of the class implementing Spark version of the main coreference algorithm to use -->
+    <entry key="coref_algorithm">adept.e2e.algorithms.IllinoisCorefSpark</entry>
+    <!-- Config file to use with coref_algorithm. These config files can either use absolute filesystem path or a path relative to the classpath-->
+    <entry key="coref_config">edu/uiuc/coreference/IllinoisCorefConfig.xml</entry>
+
+    <!-- Name of the class implementing Spark version of the main entity-linking algorithm to use-->
+    <entry key="entity_linking_algorithm">adept.e2e.algorithms.RPIEDLSpark</entry>
+    <entry key="entity_linking_config">edu/rpi/blender/RPIBlenderConfig.xml</entry>
+
+    <!-- Name of the class implementing Spark version of the main relation-extraction algorithm to use-->
+    <entry key="relation_extraction_algorithm">adept.e2e.algorithms.StanfordRESpark</entry>
+    <entry key="relation_extraction_config">edu/stanford/nlp/StanfordCoreNlpProcessorConfig.xml</entry>
+
+    <!-- Name of the class implementing Spark version of the main event-extraction algorithm to use-->
+    <entry key="event_extraction_algorithm">adept.e2e.algorithms.SerifEALSpark</entry>
+    <entry key="event_extraction_config">serif_config.xml</entry>
+
+    <!-- Name of the class implementing Spark version of the openierelation-extraction algorithm to use
+    <entry key="openierelation_extraction_algorithm">adept.e2e.algorithms.WashingtonReVerbRESpark</entry>
+    <entry key="openierelation_extraction_config"></entry>
+    -->
+
+    <!-- Algorithms that E2E system should run; algorithms not configured here will not be run. Leave blank,
+         if you want all the default algorithms to run. However, if this param is configured, coref_algorithm and
+         entity_linking_algorithm are mandatory.-->
+    <entry key="algorithms_to_run">coref_algorithm,entity_linking_algorithm,relation_extraction_algorithm,event_extraction_algorithm</entry>
+
+    <!--
+        Following param is used to skip algorithms or other stages that have 
+        already run. Sometimes the algorithms or other stages (like 
+        chunk-alignment or master-container-creation) fail on certain documents 
+        every time they run, and trying to re-run those algorithms or stages on 
+        the same documents may not result in anything.
+        Skipping those algorithms makes sure that no time is spent trying to run 
+        algorithms on such documents that have aalready failed (based on the 
+        checkpointed information).
+        Names for various stages supported by this param are: coref_algorithm, 
+        entity_linking_algorithm, relation_extraction_algorithm, 
+        event_extraction_algorithm, openierelation_extraction_algorithm, 
+        chunk_alignment, master_container_creation and 
+        batch_level_artifact_extraction.
+        Note that if a stage is not skipped, and it happens to successfully 
+        process any documents that it failed on earlier, any subsequent stages 
+        will be run at least on those documents. For example, if chunk_alignment 
+        runs successfully on 10 documents that it failed on last time, both 
+        master_container_creation and batch_level_artifact_extraction will be run 
+        at least on those 10 documents (if they have been run earlier on the rest 
+        of the documents).
+        Note that if batch_level_artifact_extraction runs on any new set of 
+        documents, it will trigger a fresh KB upload.
+    -->
+
+    <entry key="stages_to_skip"></entry>
+
+    <!-- Corpus Parameters-->
+    <!--============================================================================-->
+    <!--Use this option to set the XML read mode for creating a Document object from an SGM of MPDF file.
+        Allowed values for this option are, as documented for the enum DocumentMaker.XMLReadMode:
+            DEFAULT
+                Build the document by parsing out the relevant elements using an XML DOM parser, disregarding the raw XML file as a whole.
+                 The character offsets will refer to a contrived document value that is built from concatenated the XML elements.
+            RAW_XML
+                Similar to DEFAULT, but read the document value by explicitly locating the relevant text in the raw XML file and replacing everything else with whitespace.
+                The character offsets will correspond with this "raw" value.
+            RAW_XML_TAC
+                Like RAW_XML, but read the raw file as if it began at the opening <doc> or <DOC> tag, as per TAC offset guidelines.
+         If this option is not set or is absent, the mode used will be DEFAULT. -->
+
+    <entry key="xml_read_mode">DEFAULT</entry>
+
+    <!--Debugging Parameters-->
+    <!--============================================================================-->
+    <!--If set to true, this param throws any and all exceptions from the executors back to the adept.e2e.driver.driver.
+        Set to false for deployment.-->
+    <entry key="is_debug_mode">false</entry>
+
+    <!--If set to true, this param gathers some useful statistics for analysis and debugging,
+        and prints them to stats_file_path.-->
+    <entry key="gather_statistics">true</entry>
+
+    <!--File to which the stats should be written. Should be a path accessible by all nodes in the cluster.
+        This param must be set, if gather_statistics is true. if the file system
+        already exists, it must be a file. If it does not exist, the system
+        will attempt to create it.
+    -->
+    <entry key="stats_file_path">jgriffit/stats</entry>
+
+    <!--KB Parameters-->
+    <!--============================================================================-->
+
+    <!--Corpus ID can be any string identifying your corpus -->
+    <entry key="corpus_id">test</entry>
+
+    <!-- URL for the triple store -->
+    <entry key="triple_store_url">http://deft-docker-01.bbn.com:7800/parliament</entry>
+
+    <!--Hostname for metadata db-->
+    <entry key="metadata_host">deft-docker-01.bbn.com</entry>
+
+    <!--Port for metadata db-->
+    <entry key="metadata_port">7801</entry>
+
+    <!--Name of metadata db-->
+    <entry key="metadata_db">test</entry>
+
+    <!--Username for metadata db-->
+    <entry key="metadata_user_name">testuser</entry>
+
+    <!--Password for metadata db-->
+    <entry key="metadata_password">testpasswd</entry>
+
+    <!--KB-reporting parameters-->
+    <!--============================================================================-->
+    <!--Set to true to generate kb-reports; default value is false-->
+    <entry key="generate_kb_reports">true</entry>
+
+    <!--Output directory to dump reports to
+        This must point to an existing directory. If it is a relative
+        path, it is assumed to be relative to the shared directory defined
+        in the shared_fs_top entry below
+    -->
+    <entry key="kb_report_output_dir">jgriffit/kb-reports</entry>
+
+    <!--Comment this entry for KBResolver properties if you don't want KBResolver to run-->
+    <entry key="kb_resolver_properties"><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+	    <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+       	    <properties>
+		<comment>Parameters to configure what filters to use in the consolidation process</comment>
+	    <entry key="filterTypes">EntityTypeAnalysis,ConfidenceScaling</entry>
+
+	    <entry key="entityAnalysisChoice">DumpMinorityTypes</entry>
+	    <entry key="entityTypeOutlierPercentThreshold"></entry>
+	    <entry key="logFileBasename">remove_minority_types</entry>
+
+	    <entry key="allRels_ConfScaleDown">0.7</entry>
+	    <entry key="relJustificationToArgCountRatioThreshold">1.0</entry>
+	    <entry key="unlikelyRels_ConfScaleDown">1.0</entry>
+	    <entry key="unlikelyRels_ArgRelRatioThreshold">1.0</entry>
+	    <entry key="likelyRels_RelCountThreshold">1</entry>
+	    <entry key="likelyRels_ConfScaleUp">1.0</entry>
+	    <entry key="confidenceScalingLogFile">confidence_scaling_results.csv</entry>
+
+	    <entry key="largeEntityNumProvenancesThreshold">1000</entry>
+	    <entry key="outlierCanonicalMentionPercentageThreshold">0.15</entry>
+
+	</properties>]]></entry>
+
+
+    <!-- Spark-submit Parameters -->
+    <!--============================================================================-->
+    <!-- These are optional parameters used to modify how Spark processes the job. -->
+
+    <!-- The master entry defines the value passed to the "master"
+         parameter in the spark-submit command. The valid values for this are:
+         o yarn              Connect to the YARN cluster in client or cluster mode,
+                             depending on the value of the spark-deploy-mode entry
+                             below. This is the default if the entry is not defined
+                             or has an empty value.
+         o local             Runs the job locally in a single thread (no parallelism)
+         o local[K]          Runs the job locally using K worker threads (ideally
+                             the number of cores the host has)
+         o local[*]          Runs the job locally with as many threads as there are 
+                             logical cores on the host
+         o spark://HOST:PORT Runs the job on the specified Spark standalone cluster
+                             master. The port must be the one the master is configured
+                             to use, which is 7070 by default.
+         o mesos://HOST:PORT Runs the job on the specified Mesos cluster. See
+                             https://spark.apache.org/docs/latest/submitting-applications.html#master-urls
+                             for specific information on this option.
+    -->
+
+    <entry key="master"></entry>
+
+    <!--The deploy_mode entry defines the value passed to the "deploy-mode" 
+         parameter in the spark-submit command. The valid values for this are:
+         o cluster        The Spark driver will run on the cluster itself and
+                          be managed by the cluster. This is the default if the entry
+                          is not defined or is empty.
+         o client         The Spark driver runs on the docker host itself and
+                          the cluster application master is used only for requesting
+                          cluster resources.
+    -->
+
+    <entry key="deploy_mode"></entry>
+
+    <!--Top-level directory under which jars, class files and resources may be 
+        placed for the various algorithms and the models they use. This path is 
+        appended to the classpath so that the classes and resources under this
+        directory can be loaded by each host in the cluster.
+
+        This path must be valid for every host participating in the cluster. if
+        the path is relative (does not start with a '/') it is assumed to be 
+        relative to the value defined in the "shared_top" entry below.
+    -->
+
+    <entry key="ext_classpath">e2e_artifacts/e2e_external_classpath</entry>
+
+    <!-- Shared Filesystem Definition -->
+    <!-- Every host in the cluster requires access to a shared filesystem accessible
+         using the same path. This path is used to store logs, reports and 
+         statistics files. In addition, the common algorithm model files and 
+         resources, as well as some third party jars containing class files,
+         are often stored under this path (see ext-classpath above).
+    -->
+
+    <entry key="shared_top">/nfs/mercury-04/u40</entry>
+
+    <!-- top of the directory containing the model data. A2KD expects this directory
+         will contain a child directory named "classes", which contains the model 
+         configuration and resource files as a class tree.
+         This may be subsumed by the ext_classpath value above, or vice-versa.
+    -->
+    <entry key="models_dir">/nfs/mercury-04/u40/e2e_artifacts/e2e_external_classpath</entry>
+</properties>

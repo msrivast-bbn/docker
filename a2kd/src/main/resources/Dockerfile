@@ -3,13 +3,13 @@ FROM ubuntu:xenial
 ENV CDH_VERSION=5.11 CDH_MAJOR=5 \
     SPARK_VERSION=2.0.0 HADOOP_VERSION=2.6 \
     JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 \
-    E2E_HOME=/var/lib/adept-e2e DEBIAN_FRONTEND=noninteractive
+    A2KD_HOME=/var/lib/adept-a2kd DEBIAN_FRONTEND=noninteractive
 ENV SPARK_TGZ=spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz \
     SPARK_HOME=/var/lib/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION \
-    PATH=$E2E_HOME/bin:$SPARK_HOME/bin:$JRE_HOME/bin:$JAVA_HOME/bin:$PATH \
+    PATH=$A2KD_HOME/bin:$SPARK_HOME/bin:$JRE_HOME/bin:$JAVA_HOME/bin:$PATH \
     JRE_HOME=$JAVA_HOME/jre
 
-COPY entrypoint.sh gosu-amd64 spark-2.0.0-bin-hadoop2.6.tgz e2e.sh adept-e2e-bin.zip LICENSE.txt THIRD_PARTY.txt /
+COPY entrypoint.sh gosu-amd64 spark-2.0.0-bin-hadoop2.6.tgz a2kd.sh adept-e2e-bin.zip LICENSE.txt THIRD_PARTY.txt /
 
 # default version of python is 2.7
 # initial installs
@@ -32,11 +32,11 @@ RUN apt-get update -y && \
     rm -f /${SPARK_TGZ} && \
     chmod +x /entrypoint.sh && \
     echo "export SPARK_DIST_CLASSPATH=$(hadoop classpath)" >> ${SPARK_HOME}/conf/spark-env.sh && \
-    mkdir -p ${E2E_HOME} && \
-    unzip -d ${E2E_HOME} /adept-e2e-bin.zip && \
-    mkdir -p ${E2E_HOME}/bin && \
-    mv /e2e.sh ${E2E_HOME}/bin/e2e.sh && \
-    chmod +x ${E2E_HOME}/bin/e2e.sh && \
+    mkdir -p ${A2KD_HOME} && \
+    unzip -d ${A2KD_HOME} /adept-e2e-bin.zip && \
+    mkdir -p ${A2KD_HOME}/bin && \
+    mv /a2kd.sh ${A2KD_HOME}/bin/a2kd.sh && \
+    chmod +x ${A2KD_HOME}/bin/a2kd.sh && \
     rm -f /adept-e2e-bin.zip 
 
 EXPOSE 4040

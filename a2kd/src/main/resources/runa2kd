@@ -1,0 +1,231 @@
+#!/bin/bash
+set -e
+#
+# Script run on the dockerd host to start the E2E Container.
+
+function printLicense {
+  cat <<-"EOF"
+Copyright © 2012-2017 Raytheon BBN Technologies, Inc.
+Cambridge, MA USA
+All rights reserved.
+
+This program and associated material contains information whose export or 
+disclosure to Non-U.S. Persons, wherever located, is subject to the Export 
+Administration Regulations (EAR) (15 C.F.R. §730-774). Specifically,
+Raytheon BBN Technologies conducted an internal review and determined that this 
+information is export controlled as EAR99. Exports contrary to U.S. law are
+prohibited.
+
+As part of the DEFT effort, BBN SERIF(TM) is being provided with Government
+Purpose Rights. Please see DFARS 252.227-7014 for details.
+
+Various third-party libraries are incorporated into this application. Please
+see THIRD-PARTY.txt for a list of the libraries and their licenses.
+
+-------------------------------------------------------------------------------
+
+EOF
+}
+
+function help {
+  ( >&2 echo "$1 <a2kd_config file> <input_directory> <num_partitions> <num_executors>")
+  exit $2
+}
+
+function errexit {
+   ( >&2 echo "$1")
+   logger -p user.error "$1"
+   exit 1
+}
+
+# check for help
+if [ $# -eq 0 -o "$1" = "-h" -o "$1" = "--help" ]; then
+  help $0 0
+fi
+if [ $# -ne 4 ]; then
+  ( >&2 echo "ERROR: incorrect number of parameters")
+  help $0 1
+fi
+
+# Set up identity variables
+IFS='~'
+UI="$(id -u)"
+UN="$(id -un)"
+GI="$(id -g)"
+GN="$(id -gn)"
+unset IFS
+
+# Check for or set SPARK_CONF_DIR
+if [ ! "${SPARK_CONF_DIR}" ] ; then
+  if [ ! "${SPARK_HOME}" ] ; then
+    if [ -d /etc/spark/conf ] ; then
+      SPARK_CONF_DIR=/etc/spark/conf
+    fi
+    S=$(type -p spark-submit)
+    if [ $? -ne 0 -a ! -d /etc/spark/conf ] ; then
+      errexit "ERROR: cannot identify SPARK_CONF_DIR or SPARK_HOME or find spark-submit in your path."
+    fi
+    SPARK_HOME=${S%%/bin/spark-submit}
+    unset S
+    if [ "${SPARK_HOME}" = /usr -o "${SPARK_HOME}" = / -o "${SPARK_HOME}X" = X ] ; then
+      unset SPARK_HOME
+    else
+      if [ -d ${SPARK_HOME}/conf -a -r ${SPARK_HOME}/conf ] ; then
+        SPARK_CONF_DIR=${SPARK_HOME}/conf
+      else
+        errexit "ERROR: cannot identify SPARK_CONF_DIR (conf) under SPARK_HOME "${SPARK_HOME}" or in /etc/spark"
+      fi
+    fi
+  else
+    if [ -d ${SPARK_HOME}/conf -a -r ${SPARK_HOME}/conf ] ; then
+      SPARK_CONF_DIR=${SPARK_HOME}/conf
+    else
+      if [ -d /etc/spark/conf -a -r /etc/spark/conf ] ; then
+        SPARK_CONF_DIR=/etc/spark/conf
+      else
+        errexit "ERROR: cannot identify SPARK_CONF_DIR (conf) under SPARK_HOME "${SPARK_HOME}" or in /etc/spark/conf"
+      fi
+    fi
+  fi
+fi
+if [ ! "${SPARK_CONF_DIR}" ] ; then
+  errexit "ERROR: SPARK_CONF_DIR is not defined and cannot be guessed"
+fi
+if [ ! -d "${SPARK_CONF_DIR}" ] ; then
+  errexit "ERROR: cannot find SPARK_CONF_DIR (conf) under SPARK_HOME "${SPARK_HOME}" or in /etc/spark/conf"
+fi
+if [ ! -r "${SPARK_CONF_DIR}" ] ; then
+  errexit "ERROR: SPARK_CONF_DIR (${SPARK_CONF_DIR}) found but is not readable"
+fi
+# Check for or set HADOOP_CONF_DIR
+if [ ! "${HADOOP_CONF_DIR}" ] ; then
+  if [ ! "${HADOOP_HOME}" ] ; then
+    if [ -d /etc/hadoop/conf -a -r /etc/hadoop/conf ] ; then
+      HADOOP_CONF_DIR=/etc/hadoop/conf
+    fi
+    S=$(type -p hadoop)
+    if [ $? -ne 0 -a ! -d /etc/hadoop/conf ] ; then
+      errexit "ERROR: cannot identify HADOOP_CONF_DIR or HADOOP_HOME or find hadoop in your path."
+    fi
+    HADOOP_HOME=${S%%/bin/hadoop}
+    unset S
+    if [ "${HADOOP_HOME}" = /usr -o "${HADOOP_HOME}" = / -o "${HADOOP_HOME}X" = X ] ; then
+      unset HADOOP_HOME
+    else
+      if [ -d "${HADOOP_HOME}/conf" -a -r "${HADOOP_HOME}/conf" ] ; then
+        HADOOP_CONF_DIR="${HADOOP_HOME}/conf"
+      else
+        errexit "ERROR: cannot identify HADOOP_CONF_DIR (conf) under HADOOP_HOME \"${HADOOP_HOME}\" or in /etc/hadoop"
+      fi
+    fi
+  else
+    if [ -d "${HADOOP_HOME}/conf" -a -r "${HADOOP_HOME}/conf" ] ; then
+      HADOOP_CONF_DIR="${HADOOP_HOME}/conf"
+    else
+      if [ -d /etc/hadoop/conf -a -r /etc/hadoop/conf ] ; then
+        HADOOP_CONF_DIR=/etc/hadoop/conf
+      else
+        errexit "ERROR: cannot identify HADOOP_CONF_DIR (conf) under HADOOP_HOME \"${HADOOP_HOME}\" or in /etc/hadoop/conf"
+      fi
+    fi
+  fi
+fi
+if [ ! "${HADOOP_CONF_DIR}" ] ; then
+  errexit "ERROR: HADOOP_CONF_DIR is not defined and cannot be guessed"
+fi
+if [ ! -d "${HADOOP_CONF_DIR}" ] ; then
+  errexit "ERROR: cannot identify HADOOP_CONF_DIR (conf) under HADOOP_HOME \"${HADOOP_HOME}\" or in /etc/hadoop/conf"
+fi
+if [ ! -r "${HADOOP_CONF_DIR}" ] ; then
+  errexit "ERROR: HADOOP_CONF_DIR (${HADOOP_CONF_DIR}) found but is not readable"
+fi
+
+# $1 a2kd config file
+if [ ! -f "${1}" -o ! -r "${1}" ] ; then
+  errexit "ERROR: A2KD Configuration File \"${1}\" does not exist, is not a file, or is not readable"
+fi
+IFS='%'
+a2kd_config="$(readlink -f $"${1}")"
+unset IFS
+echo $a2kd_config "$a2kd_config"
+# $2 input data directory
+if [ ! -d "${2}" -o ! -r "${2}" ] ; then
+  errexit "ERROR: A2KD Input Data Directory \"${2}\" does not exist, is not a directory, or is not readable"
+fi
+IFS='%'
+a2kd_input_dir="$(readlink -f $"${2}")" # also convert to an absolute path name
+unset IFS
+echo $a2kd_input_dir "$a2kd_input_dir"
+# $3 partitions
+if ! [[ "${3}" =~ ^[0-9]+$ ]] ; then
+  errexit "ERROR: number of partitions value \"${3}\" is not an integer value"
+fi
+a2kd_num_partitions="$3"
+# $4 executors
+if ! [[ "${4}" =~ ^[0-9]+$ ]] ; then
+  errexit "ERROR: number of executors value \"${4}\" is not an integer value"
+fi
+a2kd_num_executors="$4"
+
+# read and parse the configuration file for the values of interest
+while read line; do
+    [[ "$line" =~ ^([[:space:]]*<entry[[:space:]]+key=\")([^\"]+)(\"[[:space:]]*>)([^<]*)(<[[:space:]]*/entry[[:space:]]*>) ]] && declare ${BASH_REMATCH[2]}=${BASH_REMATCH[4]}
+done < "$a2kd_config"
+
+[ "$shared_top" ] || errexit "ERROR: the \"shared_top\" variable is not defined in the \"$a2kd_config\" file"
+if [ ! -d $shared_top -o ! -r $shared_top ] ; then
+  errexit "ERROR: The A2KD Shared Directory \"$shared_top\" does not exist, is not a directory, or is not readable"
+fi
+
+a2kd_output_dir="$(readlink -f $"${PWD}")"
+
+if [ \( ! "$DOCKER_CERT_PATH" -o ! "$DOCKER_HOST" -o ! "$DOCKER_TLS_VERIFY" \) -a \( $(id -u) -ne 0 \) ] ; then
+  SUDO="sudo "
+else
+  unset SUDO
+fi
+if [ "$kb_report_output_dir" ]; then
+  if [[ $kb_report_output_dir != /* ]] ; then
+    kb_report_output_dir=$shared_top/$kb_report_output_dir
+  fi
+  mkdir -p $kb_report_output_dir/$corpus_id
+fi
+if [[ "$gather_statistics" == "true" ]]; then
+  if [ ! "$stats_file_path" ] ; then
+    errexit "ERROR: gather_statistics is set to true in ${a2kd_config}, but stats_file_path is not set"
+  fi
+  if [[ $stats_file_path != /* ]] ; then
+    stats_file_path=$shared_top/$stats_file_path
+  fi
+  if [ ! -e $stats_file_path ]; then
+    mkdir -p $(dirname $stats_file_path)
+    touch $stats_file_path
+  else
+    [ -f $stats_file_path ] || errexit "ERROR: the statistics file path $stats_file_path exists but is not a file"
+    [ -w $stats_file_path ] || errexit "ERROR: the statistics file path $stats_file_path exists but is not writable"
+  fi
+  chmod 777 $stats_file_path
+fi
+find $kb_report_output_dir -type d -exec chmod 777 {} \;
+
+# print the license
+printLicense
+# Next Phase - start the container and continue processing
+${SUDO}docker run -it --rm --name "$corpus_id" \
+  -e LOCAL_USER_ID=$UI \
+  -e LOCAL_USER_NAME="$UN" \
+  -e LOCAL_GROUP_ID=$GI \
+  -e LOCAL_GROUP_NAME="$GN" \
+  -e master=${master:-yarn} \
+  -e deploy_mode=${deploy_mode:-cluster} \
+  -e shared_top="$shared_top" \
+  -e a2kd_config="$a2kd_config" \
+  -v "$HADOOP_CONF_DIR":/conf/hadoop \
+  -v "$SPARK_CONF_DIR":/conf/spark \
+  -v "$shared_top":/sharedData \
+  -v "$a2kd_config":/a2kd_config \
+  -v "$a2kd_input_dir":/input \
+  -v "$a2kd_output_dir":/output \
+  -p :4040 \
+  deft/a2kd a2kd.sh $2 $3 $4
+
