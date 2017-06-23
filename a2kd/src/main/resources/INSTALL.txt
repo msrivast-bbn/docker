@@ -52,9 +52,9 @@ INSTALLATION
 
 2) Install command scripts into a bin on your path
         select or create a top level directory (your home directory is fine)
-        export A2KD_HOME=<top>
+        export A2KD_HOME=<directory>
         mkdir -p $A2KD_HOME
-        tar -C $A2KD_HOME -xf <tarball>
+        tar -C $A2KD_HOME/bin -xf a2kd_confignscripts.tgz
         export PATH=$PATH:$A2KD_HOME/bin
 
 3) Start the Parliament and Postgres images on your docker host
@@ -64,6 +64,7 @@ INSTALLATION
  * Starts postgres listening on port 7800 and parliament on port 7801. Creates
    the initial database on both servers and sets the password of the postgres
    administrative user (superuser).
+ * Make sure the chosen ports are open on the machine
 
 4) Identify the location of the Spark and HADOOP configuration directories and
    ensure they are accessible from the host you will be running runa2kd on. If
@@ -76,8 +77,15 @@ INSTALLATION
 
 For each corpus/run of runa2kd:
 
-1) Set up metadata DB information in a2kd configuration file
-   triple_store_url, metadata_host, metadata_port, metadata_db, metadata_user_name, and metadata_password
+1) Edit a2kd_config.xml with information about the Parliament triple store and the Postgres metadata DB
+   Assuming a hostname of HOSTNAME, and docker containers running from the above commands, the following
+   lines would be edited accordingly.  Note that metadata_user_name and metadata_password are distinct
+   from the admin account and password that was set when starting the container.
+    <entry key="triple_store_url">http://HOSTNAME:7801/parliament</entry>
+    <entry key="metadata_host">HOSTNAME</entry>
+    <entry key="metadata_port">7800</entry>
+    <entry key="metadata_user_name">testuser</entry>
+    <entry key="metadata_password">testpasswd</entry>
 
 2) Ensure the HADOOP and Spark configuration parameters are accessible as
    specified above in (4).
