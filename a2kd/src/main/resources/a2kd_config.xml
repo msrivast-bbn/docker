@@ -121,8 +121,7 @@
     <!--Set to true to generate kb-reports; default value is false-->
     <entry key="generate_kb_reports">true</entry>
 
-    <!--Output directory to dump reports to
-        This must point to an existing directory. If it is a relative
+    <!--Output directory to dump reports to. If it is a relative
         path, it is assumed to be relative to the shared directory defined
         in the shared_top entry below
     -->
