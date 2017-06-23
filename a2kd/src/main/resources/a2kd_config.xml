@@ -3,8 +3,6 @@
 <properties>
     <comment>Config File for E2E System</comment>
 
-    <!-- Note: Avoid newlines in parameter values since they are not stripped by E2eDriver code-->
-
     <!-- Algorithm Parameters-->
     <!--============================================================================-->
     <!-- Name of the class implementing Spark version of the main coreference algorithm to use -->
@@ -18,21 +16,19 @@
 
     <!-- Name of the class implementing Spark version of the main relation-extraction algorithm to use-->
     <entry key="relation_extraction_algorithm">adept.e2e.algorithms.StanfordRESpark</entry>
-    <entry key="relation_extraction_config">edu/stanford/nlp/StanfordCoreNlpProcessorConfig.xml</entry>
+    <entry key="relation_extraction_config">edu/stanford/nlp/StanfordCoreNlpProcessorConfig.xml
+    </entry>
 
     <!-- Name of the class implementing Spark version of the main event-extraction algorithm to use-->
     <entry key="event_extraction_algorithm">adept.e2e.algorithms.SerifEALSpark</entry>
     <entry key="event_extraction_config">serif_config.xml</entry>
 
-    <!-- Name of the class implementing Spark version of the openierelation-extraction algorithm to use
-    <entry key="openierelation_extraction_algorithm">adept.e2e.algorithms.WashingtonReVerbRESpark</entry>
-    <entry key="openierelation_extraction_config"></entry>
-    -->
-
-    <!-- Algorithms that E2E system should run; algorithms not configured here will not be run. Leave blank,
-         if you want all the default algorithms to run. However, if this param is configured, coref_algorithm and
-         entity_linking_algorithm are mandatory.-->
-    <entry key="algorithms_to_run">coref_algorithm,entity_linking_algorithm,relation_extraction_algorithm,event_extraction_algorithm</entry>
+    <!-- Algorithms that E2E system should run; algorithms not configured here will not be run. 
+         This param cannot be left blank. Currently, e2e mandates at least running coref_algorithm and
+         entity_linking_algorithm. -->
+    <entry key="algorithms_to_run">
+        coref_algorithm,entity_linking_algorithm,relation_extraction_algorithm,event_extraction_algorithm
+    </entry>
 
     <!--
         Following param is used to skip algorithms or other stages that have 
@@ -45,7 +41,7 @@
         checkpointed information).
         Names for various stages supported by this param are: coref_algorithm, 
         entity_linking_algorithm, relation_extraction_algorithm, 
-        event_extraction_algorithm, openierelation_extraction_algorithm, 
+        event_extraction_algorithm,  
         chunk_alignment, master_container_creation and 
         batch_level_artifact_extraction.
         Note that if a stage is not skipped, and it happens to successfully 
@@ -63,11 +59,11 @@
 
     <!-- Corpus Parameters-->
     <!--============================================================================-->
-    <!--Use this option to set the XML read mode for creating a Document object from an SGM of MPDF file.
+    <!--Use this option to set the XML read mode for creating a Document object from an SGM or MPDF file.
         Allowed values for this option are, as documented for the enum DocumentMaker.XMLReadMode:
             DEFAULT
                 Build the document by parsing out the relevant elements using an XML DOM parser, disregarding the raw XML file as a whole.
-                 The character offsets will refer to a contrived document value that is built from concatenated the XML elements.
+                 The character offsets will refer to a contrived document value that is built from concatenating the XML elements.
             RAW_XML
                 Similar to DEFAULT, but read the document value by explicitly locating the relevant text in the raw XML file and replacing everything else with whitespace.
                 The character offsets will correspond with this "raw" value.
@@ -88,9 +84,11 @@
     <entry key="gather_statistics">true</entry>
 
     <!--File to which the stats should be written. Should be a path accessible by all nodes in the cluster.
-        This param must be set, if gather_statistics is true. if the file system
+        This param must be set, if gather_statistics is true. If the file system path
         already exists, it must be a file. If it does not exist, the system
-        will attempt to create it.
+        will attempt to create it. 
+        If the configured path is a relative path (does not start with a '/'), it is assumed to be relative to the
+        shared directory defined in the shared_top entry below.
     -->
     <entry key="stats_file_path">jgriffit/stats</entry>
 
@@ -126,7 +124,7 @@
     <!--Output directory to dump reports to
         This must point to an existing directory. If it is a relative
         path, it is assumed to be relative to the shared directory defined
-        in the shared_fs_top entry below
+        in the shared_top entry below
     -->
     <entry key="kb_report_output_dir">jgriffit/kb-reports</entry>
 
@@ -196,9 +194,16 @@
         placed for the various algorithms and the models they use. This path is 
         appended to the classpath so that the classes and resources under this
         directory can be loaded by each host in the cluster.
+        
+        For model configuration and resource files, A2KD expects this directory 
+        to contain a child directory named "classes", where the model 
+        configuration and resource files should be placed as a class tree. 
+        Additionally, when using BBN_SERIF algorithm, the "classes" directory should 
+        have write permissions, since A2KD will attempt to write some temporary config
+        files to that.
 
         This path must be valid for every host participating in the cluster. if
-        the path is relative (does not start with a '/') it is assumed to be 
+        the path is relative, it is assumed to be 
         relative to the value defined in the "shared_top" entry below.
     -->
 
@@ -214,10 +219,4 @@
 
     <entry key="shared_top">/nfs/mercury-04/u40</entry>
 
-    <!-- top of the directory containing the model data. A2KD expects this directory
-         will contain a child directory named "classes", which contains the model 
-         configuration and resource files as a class tree.
-         This may be subsumed by the ext_classpath value above, or vice-versa.
-    -->
-    <entry key="models_dir">/nfs/mercury-04/u40/e2e_artifacts/e2e_external_classpath</entry>
 </properties>
