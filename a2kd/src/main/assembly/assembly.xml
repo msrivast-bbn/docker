@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<assembly>
+  <id>confignscripts</id>
+  <formats>
+    <format>tar.gz</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <fileSets>
+    <fileSet>
+      <directory>target/classes</directory>
+      <outputDirectory></outputDirectory>
+      <includes>
+        <include>LICENSE.txt</include>
+        <include>THIRD_PARTY.txt</include>
+        <include>a2kd_config.xml</include>
+        <include>INSTALL.txt</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>target/appassembler</directory>
+      <outputDirectory></outputDirectory>
+      <includes>
+        <include>**/*</include>
+      </includes>
+    </fileSet>
+  </fileSets>
+  <files>
+    <file>
+      <source>src/main/resources/DEFTCreateUserDB.sh</source>
+      <destName>DEFTCreateUserDB</destName>
+      <outputDirectory>bin</outputDirectory>
+      <fileMode>755</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
+    <file>
+      <source>src/main/resources/a2kd_config.xml</source>
+      <outputDirectory>conf</outputDirectory>
+      <fileMode>444</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
+  </files>
+</assembly>
+    </fileSet>
+  </fileSets>
+</assembly>

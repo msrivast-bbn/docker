@@ -85,9 +85,8 @@
                                 <groupId>adept</groupId>
                                 <artifactId>adept-e2e</artifactId>
                                 <version>${project.version}</version>
-                                <classifier>bin</classifier>
-                                <type>zip</type>
-                                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                                <type>jar</type>
+                                <outputDirectory>${project.build.directory}/appassembler/lib</outputDirectory>
                               </artifactItem>
                           </artifactItems>
                           <stripVersion>true</stripVersion>
@@ -185,6 +184,87 @@
                   </execution>
                 </executions>
             </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>appassembler-maven-plugin</artifactId>
+        <configuration>
+          <programs>
+            <program>
+              <mainClass>adept.utilities.ClearKB</mainClass>
+              <id>ClearKB</id>
+              <jvmSettings>
+                <initialMemorySize>256M</initialMemorySize>
+                <maxMemorySize>8G</maxMemorySize>
+              </jvmSettings>
+            </program>
+            <program>
+              <mainClass>adept.utilities.ConfirmRemoteTripleStoreConnection</mainClass>
+              <id>ConfirmRemoteTripleStoreConnection</id>
+              <jvmSettings>
+                <initialMemorySize>256M</initialMemorySize>
+                <maxMemorySize>8G</maxMemorySize>
+              </jvmSettings>
+            </program>
+            <program>
+              <mainClass>adept.utilities.ConfirmSqlDatabaseConnection</mainClass>
+              <id>ConfirmSqlDatabaseConnection</id>
+              <jvmSettings>
+                <initialMemorySize>256M</initialMemorySize>
+                <maxMemorySize>8G</maxMemorySize>
+              </jvmSettings>
+            </program>
+            <program>
+              <mainClass>adept.utilities.GenerateHumanReadableReport</mainClass>
+              <id>GenerateHumanReadableReport</id>
+              <jvmSettings>
+                <initialMemorySize>256M</initialMemorySize>
+                <maxMemorySize>8G</maxMemorySize>
+              </jvmSettings>
+            </program>
+            <program>
+              <mainClass>adept.utilities.TacFormatConverter</mainClass>
+              <id>TacFormatConverter</id>
+              <jvmSettings>
+                <initialMemorySize>256M</initialMemorySize>
+                <maxMemorySize>8G</maxMemorySize>
+              </jvmSettings>
+            </program>
+          </programs>
+          <platforms>
+            <platform>unix</platform>
+          </platforms>
+          <repositoryLayout>flat</repositoryLayout>
+          <generateRepository>false</generateRepository>
+          <useWildcardClassPath>true</useWildcardClassPath>
+          <repositoryName>lib</repositoryName>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+        <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>3.0.0</version>
+          <configuration>
+            <descriptors>
+              <descriptor>src/main/assembly/assembly.xml</descriptor>
+            </descriptors>
+          </configuration>
+          <executions>
+            <execution>
+              <id>create-confignscripts</id>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
         </plugins>
     </build>
 </project>

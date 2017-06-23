@@ -1,0 +1,104 @@
+BILL OF MATERIALS
+1) Exported Docker Images:
+   o Parliament
+   o PostgreSQL
+   o NCC KB Explorer
+   o A2KD
+
+2) External Model and Data Tree (compressed tar archive)
+
+3) Tarball containing local (client) commands and configurations:
+   o DB Creation Script (adept-e2e/docker/e2e/target/classes/DEFTCreateUserDB.sh)
+   o runa2kd script (adept-e2e/docker/e2e/target/classes/runa2kd)
+   o Example a2kd config xml (/nfs/e-nfs-01/home/jgriffit/a2kd_config.xml)
+
+PREREQUISITES
+1) Java 1.8
+2) HADOOP 2.6 or later (can be Cloudera CDH 5.3+)
+   NOTE: Cloudera CDH 5.3+ includes Java 1.7 only. If you use the Cloudera
+   Manager to install your HADOOP and Spark components, then you must upgrade
+   the version of Java it uses. See
+   https://www.cloudera.com/documentation/enterprise/5-3-x/topics/cdh_cm_upgrading_to_jdk8.html
+   for details on how to upgrade your cluster.
+3) Spark 2.0.0 or later (can be Cloudera as well)
+4) Hadoop uses many ports for monitoring and control. All nodes in the cluster
+   require access to many ports on every other node. The docker nodes
+   will require similar access to monitoring ports on every cluster node.
+   Configuring HADOOP for security is covered in the Cloudera documentation.
+5) A common, shared filesystem (typically an NFS mount) accessible from every 
+   node in the cluster and the docker client hosts. This filesystem is used for 
+   logging and report files as well as to support the algorithm model files and 
+   resources. The latter are fairly large and it is far more efficient to 
+   store them in a single shared location than to copy them about the HDFS file 
+   system as needed.
+6) A home directory in the for HADOOP file system for every user submitting
+   A2KD jobs. This directory - typically /user/<login> - provides temporary
+   storage for A2KD during processing. Each user requires full access to their
+   home directory.
+7) A host with docker installed. This host does NOT have to be a cluster
+   member.
+8) optional - A host with a web browser installed for monitoring and debugging
+   A2KD. This host requires access to the HADOOP ports on the YARN master and 
+   each of the executor hosts in the cluster.
+9) In order to use the DEFTCreateDB script, the hosts you intend to run it on
+   must have wget and psql installed.
+
+INSTALLATION
+1) Install docker images
+	docker load < parliament-2.7.10.tgz
+        docker load < postgresql-9.6.tgz
+        docker load < deft-a2kd-2.7.1.tar.xz
+        docker load < kb-explorer-2.7.1.tar.xz
+
+2) Install command scripts into a bin on your path
+        select or create a top level directory (your home directory is fine)
+        export A2KD_HOME=<top>
+        mkdir -p $A2KD_HOME
+        tar -C $A2KD_HOME -xf <tarball>
+        export PATH=$PATH:$A2KD_HOME/bin
+
+3) Start the Parliament and Postgres images on your docker host
+
+        docker run -d --name=postgres7800 --restart=always -e POSTGRES_PASSWORD=<password> -p 7800:8089 deft/postgres:latest postgres
+        docker run -d --name=parliament7801 --restart=always -p 7801:8089 deft/parliament:2.7.10
+ * Starts postgres listening on port 7800 and parliament on port 7801. Creates
+   the initial database on both servers and sets the password of the postgres
+   administrative user (superuser).
+
+4) Identify the location of the Spark and HADOOP configuration directories and
+   ensure they are accessible from the host you will be running runa2kd on. If
+   they are NOT in the standard locations (/etc/spark/conf and
+   /etc/hadoop/conf) ensure their locations are defined in the SPARK_CONF_DIR
+   and HADOOP_CONF_DIR environment variables (these are standard for both HADOOP
+   and Spark). If the submission host is not a cluster member, you should copy
+   the content of those directories to the submission host from any host in
+   the cluster (the best hosts to get them from are Spark Controller hosts).
+
+For each corpus/run of runa2kd:
+
+1) Set up metadata DB information in a2kd configuration file
+   triple_store_url, metadata_host, metadata_port, metadata_db, metadata_user_name, and metadata_password
+
+2) Ensure the HADOOP and Spark configuration parameters are accessible as
+   specified above in (4).
+
+3) If not reusing an already-running KnowledgeBase pair (a PostgreSQL server
+   instance and a Parliament instance), start a new pair:
+
+        docker run -d --name=postgres7802 --restart=always -e POSTGRES_PASSWORD=<password> -p 7802:8089 deft/postgres:latest postgres
+        docker run -d --name=parliament7803 --restart=always -p 7803:8089 deft/parliament:2.7.10
+ * Starts postgres listening on port 7802 and parliament on port 7803
+
+4) Create the database schema (per corpus):
+     DEFTCreateUserDB <a2kd_config.xml> 
+
+5) Start the run:
+
+     runa2kd ~/a2kd_config.xml ~/data 1 1
+
+   where the parameters are:
+       a2kd configuration file path
+       input file directory path
+       number of executors (will vary according to needs and cluster configuration)
+       number of partitions (also will vary)
+
