@@ -15,8 +15,7 @@
         <groupId>adept</groupId>
         <artifactId>adept-e2e</artifactId>
         <version>${project.version}</version>
-        <classifier>bin</classifier>
-        <type>zip</type>
+        <type>jar</type>
       </dependency>
     </dependencies>
     <build>
@@ -87,6 +86,25 @@
                                 <version>${project.version}</version>
                                 <type>jar</type>
                                 <outputDirectory>${project.build.directory}/appassembler/lib</outputDirectory>
+                              </artifactItem>
+                          </artifactItems>
+                          <stripVersion>true</stripVersion>
+                      </configuration>
+                    </execution>
+                    <execution>
+                      <id>copy-a2kdtoclasses</id>
+                      <phase>prepare-package</phase>
+                      <goals>
+                          <goal>copy</goal>
+                      </goals>
+                      <configuration>
+                          <artifactItems>
+                              <artifactItem>
+                                <groupId>adept</groupId>
+                                <artifactId>adept-e2e</artifactId>
+                                <version>${project.version}</version>
+                                <type>jar</type>
+                                <outputDirectory>${project.build.outbutDirectory}</outputDirectory>
                               </artifactItem>
                           </artifactItems>
                           <stripVersion>true</stripVersion>
