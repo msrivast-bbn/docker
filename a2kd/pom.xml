@@ -104,7 +104,7 @@
                                 <artifactId>adept-e2e</artifactId>
                                 <version>${project.version}</version>
                                 <type>jar</type>
-                                <outputDirectory>${project.build.outbutDirectory}</outputDirectory>
+                                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                               </artifactItem>
                           </artifactItems>
                           <stripVersion>true</stripVersion>
