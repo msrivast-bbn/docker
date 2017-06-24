@@ -59,7 +59,7 @@ INSTALLATION
 
 3) Start the Parliament and Postgres images on your docker host
 
-        docker run -d --name=postgres7800 --restart=always -e POSTGRES_PASSWORD=<password> -p 7800:8089 deft/postgres:latest postgres
+        docker run -d --name=postgres7800 --restart=always -e POSTGRES_PASSWORD=<password> -p 7800:5432 deft/postgres:latest postgres
         docker run -d --name=parliament7801 --restart=always -p 7801:8089 deft/parliament:2.7.10
  * Starts postgres listening on port 7800 and parliament on port 7801. Creates
    the initial database on both servers and sets the password of the postgres
@@ -93,7 +93,7 @@ For each corpus/run of runa2kd:
 3) If not reusing an already-running KnowledgeBase pair (a PostgreSQL server
    instance and a Parliament instance), start a new pair:
 
-        docker run -d --name=postgres7802 --restart=always -e POSTGRES_PASSWORD=<password> -p 7802:8089 deft/postgres:latest postgres
+        docker run -d --name=postgres7802 --restart=always -e POSTGRES_PASSWORD=<password> -p 7802:5432 deft/postgres:latest postgres
         docker run -d --name=parliament7803 --restart=always -p 7803:8089 deft/parliament:2.7.10
  * Starts postgres listening on port 7802 and parliament on port 7803
 
