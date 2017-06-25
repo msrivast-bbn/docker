@@ -83,7 +83,7 @@ ${SPARK_HOME}/bin/spark-submit \
 	"${A2KD_HOME}/lib/adept-e2e.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find /input -maxdepth 1 -type f | wc -l)" "$config_shared"
 
 log "downloading output directory from hdfs"
-hdfs dfs -get "${output_dir_hdfs}"
+hdfs dfs -get "${output_dir_hdfs}" /output
 
 log "removing temporary hdfs directories, a2kd configuration file"
 hdfs dfs -rm -r "${input_dir_hdfs}" "${output_dir_hdfs}"
