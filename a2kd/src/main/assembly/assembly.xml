@@ -7,7 +7,7 @@
   <includeBaseDirectory>false</includeBaseDirectory>
   <fileSets>
     <fileSet>
-      <directory>target/classes</directory>
+      <directory>${project.build.outputDirectory}</directory>
       <outputDirectory></outputDirectory>
       <includes>
         <include>LICENSE.txt</include>
@@ -31,6 +31,14 @@
       <filtered>true</filtered>
     </file>
     <file>
+      <source>${project.build.outputDirectory}/runa2kd</source>
+      <destName>runa2kd</destName>
+      <outputDirectory>bin</outputDirectory>
+      <fileMode>755</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
+    <file>
       <source>src/main/resources/a2kd_config.xml</source>
       <outputDirectory>conf</outputDirectory>
       <fileMode>444</fileMode>
@@ -39,6 +47,4 @@
     </file>
   </files>
 </assembly>
-    </fileSet>
-  </fileSets>
-</assembly>
+

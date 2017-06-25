@@ -103,7 +103,8 @@
                                 <groupId>adept</groupId>
                                 <artifactId>adept-e2e</artifactId>
                                 <version>${project.version}</version>
-                                <type>jar</type>
+                                <type>zip</type>
+                                <classifier>bin</classifier>
                                 <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                               </artifactItem>
                           </artifactItems>

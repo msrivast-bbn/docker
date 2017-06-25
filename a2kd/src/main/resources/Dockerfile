@@ -9,7 +9,7 @@ ENV SPARK_TGZ=spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz \
     PATH=$A2KD_HOME/bin:$SPARK_HOME/bin:$JRE_HOME/bin:$JAVA_HOME/bin:$PATH \
     JRE_HOME=$JAVA_HOME/jre
 
-COPY entrypoint.sh gosu-amd64 spark-2.0.0-bin-hadoop2.6.tgz a2kd.sh adept-e2e.jar LICENSE.txt THIRD_PARTY.txt /
+COPY entrypoint.sh gosu-amd64 spark-2.0.0-bin-hadoop2.6.tgz a2kd.sh adept-e2e-bin.zip LICENSE.txt THIRD_PARTY.txt /
 
 # initial installs
 RUN apt-get update -y && \
@@ -24,18 +24,19 @@ RUN apt-get update -y && \
     apt-get upgrade -y && \
     apt-get install -y hadoop hadoop-0.20-mapreduce hadoop-client hadoop-hdfs hadoop-mapreduce hadoop-yarn \
     postgresql-9.6 postgresql-contrib-9.6 postgresql-plpython-9.6 && \
+    umask 022 && \
     mv /gosu-amd64 /usr/local/bin/gosu && \
-    chmod +x /usr/local/bin/gosu && \
+    chmod 755 /usr/local/bin/gosu /entrypoint.sh && \
     tar -C /var/lib -xzf /${SPARK_TGZ} && \
     rm -f /${SPARK_TGZ} && \
-    chmod +x /entrypoint.sh && \
     echo "export SPARK_DIST_CLASSPATH=$(hadoop classpath)" >> ${SPARK_HOME}/conf/spark-env.sh && \
-    mkdir -p ${A2KD_HOME}/lib && \
-    mv /adept-e2e.jar ${A2KD_HOME}/lib && \
+    mkdir -p ${A2KD_HOME} && \
+    cd ${A2KD_HOME} && \
+    unzip /adept-e2e-bin.zip && \
+    rm /adept-e2e-bin.zip && \
     mkdir -p ${A2KD_HOME}/bin && \
     mv /a2kd.sh ${A2KD_HOME}/bin/a2kd.sh && \
-    chmod +x ${A2KD_HOME}/bin/a2kd.sh && \
-    chmod a=r ${A2KD_HOME}/lib/adept-e2e.jar
+    chmod 755 ${A2KD_HOME} ${A2KD_HOME}/bin/*
 
 EXPOSE 4040
  
