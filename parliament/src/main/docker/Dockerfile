@@ -12,7 +12,11 @@ RUN adduser parliament && \
     yum install -y java-1.8.0-openjdk.x86_64 emacs emacs-git emacs-nox vim vim-enhanced && \
     yum update -y && \
     sed -i -e 's/localhost/0.0.0.0/g' StartParliament.sh
+
+VOLUME /usr/local/parliament/data
+
 EXPOSE 8089
+
 USER parliament
 CMD /usr/local/parliament/StartParliament.sh
 
