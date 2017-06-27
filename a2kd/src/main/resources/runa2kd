@@ -70,9 +70,9 @@ fi
 # Set up identity variables
 IFS='~'
 UI="$(id -u)"
-UN="$(id -un)"
+UN="$(echo "$(id -un)" | tr " " "_")
 GI="$(id -g)"
-GN="$(id -gn)"
+GN="$(echo "$(id -gn)" | tr " " "_")
 unset IFS
 
 # Check for or set SPARK_CONF_DIR
@@ -161,17 +161,12 @@ while read line; do
 done < "$a2kd_config"
 
 [ "$shared_top" ] || errexit "ERROR: the \"shared_top\" variable is not defined in the \"$a2kd_config\" file"
-if [ ! -d $shared_top -o ! -r $shared_top ] ; then
+if [ ! -d "$shared_top" -o ! -r "$shared_top" ] ; then
   errexit "ERROR: The A2KD Shared Directory \"$shared_top\" does not exist, is not a directory, or is not readable"
 fi
 
 a2kd_output_dir="$(readlink -f $"${PWD}")"
 
-if [ \( ! "$DOCKER_CERT_PATH" -o ! "$DOCKER_HOST" -o ! "$DOCKER_TLS_VERIFY" \) -a \( $(id -u) -ne 0 \) ] ; then
-  SUDO="sudo "
-else
-  unset SUDO
-fi
 if [ "$kb_report_output_dir" ]; then
   if [[ $kb_report_output_dir != /* ]] ; then
     kb_report_output_dir=$shared_top/$kb_report_output_dir
@@ -182,24 +177,24 @@ if [[ "$gather_statistics" == "true" ]]; then
   if [ ! "$stats_file_path" ] ; then
     errexit "ERROR: gather_statistics is set to true in ${a2kd_config}, but stats_file_path is not set"
   fi
-  if [[ $stats_file_path != /* ]] ; then
+  if [[ "$stats_file_path" != /* ]] ; then
     stats_file_path=$shared_top/$stats_file_path
   fi
-  if [ ! -e $stats_file_path ]; then
-    mkdir -p $(dirname $stats_file_path)
-    touch $stats_file_path
+  if [ ! -e "$stats_file_path" ]; then
+    mkdir -p "$(dirname $stats_file_path)"
+    touch "$stats_file_path"
   else
-    [ -f $stats_file_path ] || errexit "ERROR: the statistics file path $stats_file_path exists but is not a file"
-    [ -w $stats_file_path ] || errexit "ERROR: the statistics file path $stats_file_path exists but is not writable"
+    [ -f "$stats_file_path" ] || errexit "ERROR: the statistics file path $stats_file_path exists but is not a file"
+    [ -w "$stats_file_path" ] || errexit "ERROR: the statistics file path $stats_file_path exists but is not writable"
   fi
-  chmod 777 $stats_file_path
+  chmod 777 "$stats_file_path"
 fi
-find $kb_report_output_dir -type d -exec chmod 777 {} \;
+find "$kb_report_output_dir" -type d -exec chmod 777 {} \;
 
 # print the license
 printLicense
 # Next Phase - start the container and continue processing
-${SUDO}docker run -it --rm --name "$corpus_id" \
+${DOCKER_CMD:-docker} run -it --rm --name "$corpus_id" \
   -e LOCAL_USER_ID=$UI \
   -e LOCAL_USER_NAME="$UN" \
   -e LOCAL_GROUP_ID=$GI \
