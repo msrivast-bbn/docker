@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <util:map id="kbQueryProcessors">
+        <!-- To add additional KBs, create more <entry> blocks like this -->
+        <entry key="Next Century KB">
+            <bean class="adept.kbapi.KB">
+                <constructor-arg>
+                    <bean class="adept.kbapi.KBParameters">
+                        <constructor-arg value="http://deft-kb-dmz-01.bbn.com:7800/parliament"/>
+                        <constructor-arg
+                            value="jdbc:postgresql://deft-kb-dmz-01.bbn.com:7700/postgres"/>
+                        <constructor-arg value="postgres"/>
+                        <constructor-arg value="Welcome123$"/>
+                        <constructor-arg value="/sparql"/>
+                        <constructor-arg value="/sparql"/>
+                        <constructor-arg type="boolean" value="true"/>
+                    </bean>
+                </constructor-arg>
+            </bean>
+        </entry>
+       <entry key="Integration Test KB">
+            <bean class="adept.kbapi.KB">
+                <constructor-arg>
+                    <bean class="adept.kbapi.KBParameters">
+                        <constructor-arg
+                            value="http://deft-kb-dmz-01.bbn.com:7808/parliament"/>
+                        <constructor-arg
+                            value="jdbc:postgresql://deft-kb-dmz-01.bbn.com:7700/integration_test"
+                            />
+                        <constructor-arg value="postgres"/>
+                        <constructor-arg value="Welcome123$"/>
+                        <constructor-arg value="/sparql"/>
+                        <constructor-arg value="/sparql"/>
+                        <constructor-arg type="boolean" value="true"/>
+                    </bean>
+                </constructor-arg>
+            </bean>
+        </entry>
+        <entry key="Columbia KB">
+            <bean class="adept.kbapi.KB">
+                <constructor-arg>
+                    <bean class="adept.kbapi.KBParameters">
+                        <constructor-arg value="http://deft-kb-dmz-02.bbn.com:7800/parliament"/>
+                        <constructor-arg
+                            value="jdbc:postgresql://deft-kb-dmz-02.bbn.com:7700/postgres"/>
+                        <constructor-arg value="columbia_user"/>
+                        <constructor-arg value="DEFTkb123$_XBNLCW"/>
+                        <constructor-arg value="/sparql"/>
+                        <constructor-arg value="/sparql"/>
+                        <constructor-arg type="boolean" value="true"/>
+                    </bean>
+                </constructor-arg>
+            </bean>
+        </entry>
+    </util:map>
+</beans>

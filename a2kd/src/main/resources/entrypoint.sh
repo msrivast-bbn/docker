@@ -6,13 +6,12 @@ if [ "${shared_top}" ] ; then
   ln -sf /sharedData "${shared_top}"
 else
   echo "ERROR: shared_top is not defined!"
-  exit 1
 fi
 # copy hadoop and spark configurations
 mkdir /hadoop
 mkdir /spark
-cp -R /conf/hadoop/* /hadoop
-cp -R /conf/spark/* /spark
+[ -d /conf/hadoop ] && cp -R /conf/hadoop/* /hadoop
+[ -d /conf/spark ] && cp -R /conf/spark/* /spark
 export HADOOP_CONF_DIR=/hadoop
 export SPARK_CONF_DIR=/spark
 if [ ! -f /spark/spark-env.sh ]; then
@@ -25,17 +24,17 @@ echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top%/}/${ext_classpath
 echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top%/}/${ext_classpath}/classes" >> /spark/spark-env.sh
 # set up environment for running as requesting user
 export PATH=${SPARK_HOME}/bin:${A2KD_HOME}/bin:${PATH}
-USERNAME="${LOCAL_USER_NAME:-9001}"
+USERNAME=$(echo "${LOCAL_USER_NAME:-9001}" | tr "[:space:]" "_")
 if grep "^${USERNAME}:" /etc/passwd ; then
   USERNAME="${USERNAME}1"
 fi
 USER_ID="${LOCAL_USER_ID:-9001}"
-GROUPNAME="${LOCAL_GROUP_NAME:-9001}"
-if grep "^${GROUPNAME}:" /etc/passwd ; then
+GROUPNAME=$(echo "${LOCAL_GROUP_NAME:-9001}" | tr "[:space:]" "_")
+if grep "^${GROUPNAME}:" /etc/group ; then
   GROUPNAME="${GROUPNAME}1"
 fi
 GROUP_ID="${LOCAL_GROUP_ID:-9001}"
-echo "Starting A2KD With UID: $USERNAME:$USER_ID"
+echo "Starting A2KD With UID: $USERNAME:$USER_ID - $GROUPNAME:$GROUP_ID"
 groupadd --gid "${GROUP_ID}" "${GROUPNAME}" 2>/dev/null 
 useradd --shell /bin/bash -u $USER_ID -g ${GROUP_ID} -o -c "" -m "${USERNAME}"
 export HOME="/home/${USERNAME}"
