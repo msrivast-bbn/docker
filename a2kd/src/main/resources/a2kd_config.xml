@@ -116,7 +116,7 @@
 	a2kd application is not able to write to this file from the cluster, it
 	would exit throwing an exception.
     -->
-    <entry key="stats_file_path">jgriffit/stats</entry>
+    <entry key="stats_file_path">testuser/stats</entry>
 
     <!--KB Parameters-->
     <!--============================================================================-->
@@ -152,7 +152,7 @@
 	path, it is assumed to be relative to the shared directory defined in
 	the shared_top entry below
     -->
-    <entry key="kb_report_output_dir">jgriffit/kb-reports</entry>
+    <entry key="kb_report_output_dir">testuser/kb-reports</entry>
 
     <!--Comment this entry for KBResolver properties if you don't want
          KBResolver to run-->
