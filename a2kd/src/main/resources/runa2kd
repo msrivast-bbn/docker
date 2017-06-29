@@ -70,9 +70,9 @@ fi
 # Set up identity variables
 IFS='~'
 UI="$(id -u)"
-UN="$(echo "$(id -un)" | tr " " "_")
+UN="$(echo -n "$(id -un)" | tr "[:space:]" "_")
 GI="$(id -g)"
-GN="$(echo "$(id -gn)" | tr " " "_")
+GN="$(echo -n "$(id -gn)" | tr "[:space:]" "_")
 unset IFS
 
 # Check for or set SPARK_CONF_DIR

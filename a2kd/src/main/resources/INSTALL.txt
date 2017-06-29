@@ -43,6 +43,34 @@ PREREQUISITES
 9) In order to use the DEFTCreateDB script, the hosts you intend to run it on
    must have wget and psql installed.
 
+A NOTE ON CLOUDERA-BASED INSTALLATIONS
+
+The Cloudera Manager and package set provides a powerful means of installing,
+managing and monitoring a HADOOP/Spark cluster. If you want to use the 
+Cloudera framework, here are some things to remember:
+
+1) You must use Cloudera CDH 5.7 or later. If you are installing a new cluster
+from scratch, we recommend the latest available version of Cloudera 5 (5.11
+as of the writing of this document.) You should install or upgrade to CDH 5.9
+or later.
+
+2) You must use Cloudera Manager 5.8.3, 5.9 or higher in order to support
+Spark 2.
+
+2) Cloudera 5 installs with Java 1.7 integrated. You must upgrade the cluster
+to Java 1.8. Follow the instructions provided by Cloudera in their docs.
+Try to install the latest version of Java 1.8 supported for your CDH release
+(see the product and version release support matrix in the release notes for
+your release.)
+
+3) Cloudera 5 installs with Spark 1.7 as of 5.11. You must upgrade the cluster
+to add Spark 2.0.0 CSD and parcel to your installation. Follow the directions in
+https://www.cloudera.com/documentation/spark2/latest/topics/spark2_installing.html
+in order to install Spark 2.
+
+We recommend installing the Spark 2.0 Release 2 Cloudera parcels as of the time of
+this note. 
+
 INSTALLATION
 1) Install docker images
 	docker load < parliament-2.7.10.tgz
