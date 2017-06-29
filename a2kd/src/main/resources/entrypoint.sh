@@ -24,12 +24,12 @@ echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top%/}/${ext_classpath
 echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top%/}/${ext_classpath}/classes" >> /spark/spark-env.sh
 # set up environment for running as requesting user
 export PATH=${SPARK_HOME}/bin:${A2KD_HOME}/bin:${PATH}
-USERNAME=$(echo "${LOCAL_USER_NAME:-9001}" | tr "[:space:]" "_")
+USERNAME=$(echo -n "${LOCAL_USER_NAME:-9001}" | tr "[:space:]" "_")
 if grep "^${USERNAME}:" /etc/passwd ; then
   USERNAME="${USERNAME}1"
 fi
 USER_ID="${LOCAL_USER_ID:-9001}"
-GROUPNAME=$(echo "${LOCAL_GROUP_NAME:-9001}" | tr "[:space:]" "_")
+GROUPNAME=$(echo -n "${LOCAL_GROUP_NAME:-9001}" | tr "[:space:]" "_")
 if grep "^${GROUPNAME}:" /etc/group ; then
   GROUPNAME="${GROUPNAME}1"
 fi
