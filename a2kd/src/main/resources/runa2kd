@@ -68,12 +68,10 @@ if [ $# -ne 4 ]; then
 fi
 
 # Set up identity variables
-IFS='~'
 UI="$(id -u)"
-UN="$(echo -n "$(id -un)" | tr "[:space:]" "_")
+UN="$(echo -n "$(id -un)" | tr "[:space:]" "_")"
 GI="$(id -g)"
-GN="$(echo -n "$(id -gn)" | tr "[:space:]" "_")
-unset IFS
+GN="$(echo -n "$(id -gn)" | tr "[:space:]" "_")"
 
 # Check for or set SPARK_CONF_DIR
 if [ ! "${SPARK_CONF_DIR}" ] ; then
