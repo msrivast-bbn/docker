@@ -125,13 +125,13 @@
     <entry key="corpus_id">test</entry>
 
     <!-- URL for the triple store -->
-    <entry key="triple_store_url">http://deft-docker-01.bbn.com:7800/parliament</entry>
+    <entry key="triple_store_url">http://HOSTNAME:7801/parliament</entry>
 
     <!--Hostname for metadata db-->
-    <entry key="metadata_host">deft-docker-01.bbn.com</entry>
+    <entry key="metadata_host">HOSTNAME</entry>
 
     <!--Port for metadata db-->
-    <entry key="metadata_port">7801</entry>
+    <entry key="metadata_port">7800</entry>
 
     <!--Name of metadata db-->
     <entry key="metadata_db">test</entry>
@@ -247,6 +247,6 @@
 	 files, are often stored under this path (see ext-classpath above).
     -->
 
-    <entry key="shared_top">/nfs/mercury-04/u40</entry>
+    <entry key="shared_top">/PATH/TO/SHARED/DIRECTORY</entry>
 
 </properties>
