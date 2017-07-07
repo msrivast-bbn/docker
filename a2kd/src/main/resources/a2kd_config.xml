@@ -220,6 +220,18 @@
 
     <entry key="deploy_mode">cluster</entry>
 
+    <!--The executor_memory and driver_memory entries define the memory available
+        to Spark executors and the Spark driver. These should not need to be
+        adjusted unless your cluster has less than this amount of memory 
+	available. If that is the case, you will see an error message like:
+
+	Required executor memory (81920+8192 MB) is above the max threshold 
+        (83968 MB) of this cluster!
+    -->
+
+    <entry key="executor_memory">60g</entry>
+    <entry key="driver_memory">60g</entry>
+
     <!--Top-level directory under which jars, class files and resources may be 
         placed for the various algorithms and the models they use. This path is 
         appended to the classpath so that the classes and resources under this
@@ -248,5 +260,6 @@
     -->
 
     <entry key="shared_top">/PATH/TO/SHARED/DIRECTORY</entry>
+
 
 </properties>
