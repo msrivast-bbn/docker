@@ -9,7 +9,7 @@ ENV SPARK_TGZ=spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz \
     PATH=$A2KD_HOME/bin:$SPARK_HOME/bin:$JRE_HOME/bin:$JAVA_HOME/bin:$PATH \
     JRE_HOME=$JAVA_HOME/jre
 
-COPY entrypoint.sh gosu-amd64 spark-2.0.0-bin-hadoop2.6.tgz a2kd.sh adept-e2e-bin.zip LICENSE.txt THIRD_PARTY.txt /
+COPY entrypoint.sh gosu-amd64 spark-2.0.0-bin-hadoop2.6.tgz a2kd.sh adept-e2e-bin.zip /
 
 # initial installs
 RUN apt-get update -y && \
@@ -36,7 +36,8 @@ RUN apt-get update -y && \
     rm /adept-e2e-bin.zip && \
     mkdir -p ${A2KD_HOME}/bin && \
     mv /a2kd.sh ${A2KD_HOME}/bin/a2kd.sh && \
-    chmod 755 ${A2KD_HOME} ${A2KD_HOME}/bin/*
+    chmod 755 ${A2KD_HOME} ${A2KD_HOME}/bin/* && \
+    cp -f ${A2KD_HOME}/*.txt /
 
 EXPOSE 4040
  
