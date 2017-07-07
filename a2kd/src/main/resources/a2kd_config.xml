@@ -229,8 +229,8 @@
         (83968 MB) of this cluster!
     -->
 
-    <entry key="executor_memory">60g</entry>
-    <entry key="driver_memory">60g</entry>
+    <entry key="executor_memory">80g</entry>
+    <entry key="driver_memory">80g</entry>
 
     <!--Top-level directory under which jars, class files and resources may be 
         placed for the various algorithms and the models they use. This path is 
