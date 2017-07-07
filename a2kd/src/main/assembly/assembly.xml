@@ -10,10 +10,8 @@
       <directory>${project.build.outputDirectory}</directory>
       <outputDirectory></outputDirectory>
       <includes>
-        <include>LICENSE.txt</include>
-        <include>THIRD_PARTY.txt</include>
+        <include>*.txt</include>
         <include>a2kd_config.xml</include>
-        <include>INSTALL.txt</include>
       </includes>
     </fileSet>
     <fileSet>

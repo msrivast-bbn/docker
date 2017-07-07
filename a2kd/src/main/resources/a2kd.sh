@@ -59,6 +59,31 @@ log "running spark-submit"
 EAS="$ext_classpath"
 EXT_CP="$EAS/*:$EAS/classes"
 
+cat <<EOF
+${SPARK_HOME}/bin/spark-submit \
+	--driver-memory ${driver_memory:-80g} \
+	--executor-memory ${executor_memory:-80g} \
+	--conf spark.driver.cores=${driver_cores:-1} \
+        --conf spark.executor.extraClassPath="${EXT_CP}" \
+        --conf spark.driver.extraClassPath="${EXT_CP}" \
+	--conf spark.eventLog.enabled=${eventlog_enabled:-true} \
+	--conf spark.eventLog.dir="${spark_eventLog_dir_hdfs}" \
+	--conf spark.ui.killEnabled=${kill_enabled:-true} \
+	--conf spark.executor.cores=${executor_cores:-1} \
+	--num-executors ${num_executors} \
+	--conf spark.shuffle.blockTransferService=${shuffle_blocktransferservice:-nio} \
+	--conf spark.dynamicAllocation.enabled=${dynamic_allocation_enabled:-false} \
+	--conf spark.shuffle.service.enabled=${shuffle_service_enabled:-false} \
+	--conf spark.speculation=${speculation:-false} \
+	--conf spark.speculation.multiplier=${speculation_multiplier:-2} \
+	--class adept.e2e.driver.E2eDriver \
+	--master ${master:-yarn} \
+        --deploy-mode ${deploymode:-cluster} \
+	--queue ${queue:-pool1} \
+	--conf spark.storage.blockManagerTimeoutInterval=${storage_blockmanagertimeoutinterval:-100000} \
+	"${A2KD_HOME}/lib/adept-e2e.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find /input -maxdepth 1 -type f | wc -l)" "$config_shared"
+EOF
+
 ${SPARK_HOME}/bin/spark-submit \
 	--driver-memory ${driver_memory:-80g} \
 	--executor-memory ${executor_memory:-80g} \

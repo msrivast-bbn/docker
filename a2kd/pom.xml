@@ -103,6 +103,25 @@
                           <stripVersion>true</stripVersion>
                       </configuration>
                     </execution>
+                    <execution>
+                      <id>extract-a2kdtxt</id>
+                      <goals>
+                          <goal>unpack</goal>
+                      </goals>
+                      <configuration>
+                          <artifactItems>
+                              <artifactItem>
+                                <groupId>adept</groupId>
+                                <artifactId>adept-e2e</artifactId>
+                                <version>${project.version}</version>
+                                <type>zip</type>
+                                <classifier>bin</classifier>
+                                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                                <includes>/*.txt</includes>
+                              </artifactItem>
+                          </artifactItems>
+                      </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
