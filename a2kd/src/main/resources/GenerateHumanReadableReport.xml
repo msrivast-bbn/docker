@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <comment>Parameters needed to successfully connect to a triple store and insert KB objects into it</comment>
+ 
+    <!-- Triple store hostname and port should match what was used in a2kd_config.xml -->
+    <entry key="tripleStoreUrl">http://HOSTNAME:7801/parliament</entry>
+
+    <!-- Database hostname, port, and name should match what was used in a2kd_config.xml -->
+    <entry key="metadataUrl">jdbc:postgresql://HOSTNAME:7800/test</entry>
+ 
+    <!-- Database username should match what was used in a2kd_config.xml -->
+    <entry key="metadataUsername">testuser</entry>
+
+    <!-- Database password should match what was used in a2kd_config.xml -->
+    <entry key="metadataPassword">testpasswd</entry>
+    
+    <!-- Suffix for triple store query url.  Should be  /query for Jena+TDB, /sparql for Parliament -->
+    <entry key="queryURLSuffix">/sparql</entry>
+    <!-- Suffix for triple store update url.  Should be  /update for Jena+TDB, /sparql for Parliament -->
+    <entry key="updateURLSuffix">/sparql</entry>
+    <!-- Whether to use Parliament update processors.  Should be  false for Jena+TDB, true for Parliament -->
+    <entry key="useParliamentUpdates">true</entry>
+</properties>

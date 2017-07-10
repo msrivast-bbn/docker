@@ -50,6 +50,13 @@
       <lineEnding>unix</lineEnding>
       <filtered>true</filtered>
     </file>
+    <file>
+      <source>src/main/resources/GenerateHumanReadableReport.xml</source>
+      <outputDirectory>conf</outputDirectory>
+      <fileMode>444</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
   </files>
 </assembly>
 
