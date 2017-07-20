@@ -55,9 +55,9 @@ spark_eventLog_dir_hdfs="hdfs:///user/$(id -un)/spark_logs/spark_logs_${timestam
 hdfs dfs -mkdir -p "$spark_eventLog_dir_hdfs"
 
 log "running spark-submit"
-[[ "$ext_classpath" = /* ]] || ext_classpath=$shared_top/$ext_classpath 
+[ "${ext_classpath:0:1}" = "/" ] || ext_classpath="$shared_top/$ext_classpath"
 EAS="$ext_classpath"
-EXT_CP="$EAS/*:$EAS/classes"
+EXT_CP="/classes:${EAS}/*:${EAS}/classes"
 
 cat <<EOF
 ${SPARK_HOME}/bin/spark-submit \

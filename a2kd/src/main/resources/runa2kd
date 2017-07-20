@@ -200,6 +200,7 @@ ${DOCKER_CMD:-docker} run -it --rm --name "$corpus_id" \
   -e master=${master:-yarn} \
   -e deploy_mode=${deploy_mode:-cluster} \
   -e shared_top="$shared_top" \
+  -e ext_classpath="$ext_classpath" \
   -e a2kd_config="$a2kd_config" \
   -v "$HADOOP_CONF_DIR":/conf/hadoop \
   -v "$SPARK_CONF_DIR":/conf/spark \

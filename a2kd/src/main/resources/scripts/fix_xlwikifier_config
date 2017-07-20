@@ -1,0 +1,25 @@
+#!/bin/bash
+# Run as root by run-parts by /entrypoint before a2kd is executed
+# temporary script to fix up the Illinois XlWikifier Multilanguage configuration file
+local_classdir=/classes
+shared=/sharedData
+if [ ! "$ext_classpath" ] ; then
+  echo "${0}: ext_classpath is not defined!"
+  exit 1
+fi
+if [ ${ext_classpath:0:1} != "/" ]; then
+  ecp="${shared}/${ext_classpath%/}"
+  xlwcf="${ecp}/classes/xlwikifier-demo.config"
+else
+  ecp="${ext_classpath%/}"
+  xlwcf="${ecp}/classes/xlwikifier-demo.config"
+fi
+if [ ! -r ${xlwcf} ]; then
+  echo "xlwikifier-demo.config file does not exist at ${xlwcf} or cannot be read"
+  exit 1
+fi
+cp ${xlwcf} ${local_classdir}/xlwikifier-demo.config
+xlwcf="${local_classdir}/xlwikifier-demo.config"
+sed -i "s!\$ext_classpath/!${ecp}/!g" ${xlwcf}
+sed -i "s!/nfs/mercury-04/u40/e2e_artifacts.*/illinois-wikifier/!${ecp}/illinois-wikifier-models/!" ${xlwcf}
+exit 0

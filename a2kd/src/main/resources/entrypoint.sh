@@ -19,7 +19,11 @@ if [ ! -f /spark/spark-env.sh ]; then
     cp /spark/spark-env.sh.template /spark/spark-env.sh
   fi
 fi
+[ -d /classes ] || mkdir /classes && chmod a+rx /classes
+[ -d /scripts ] || mkdir /scripts && chmod a+rx /scripts
+run-parts /scripts
 echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:$(hadoop classpath)" >> /spark/spark-env.sh
+echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:/classes" >> /spark/spark-env.sh
 echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top%/}/${ext_classpath}/*" >> /spark/spark-env.sh
 echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top%/}/${ext_classpath}/classes" >> /spark/spark-env.sh
 # set up environment for running as requesting user
