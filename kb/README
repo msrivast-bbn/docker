@@ -1,0 +1,70 @@
+A Docker image containing both a PostgreSQL server and a Parliament server.
+Together these two services comprise a DEFT knowledgebase.
+
+In general, you should dedicate a single docker container created from this
+image to a DEFT corpus. Do not attempt to store multiple corpora in a single
+instance of this image unless you really, really know what you think you are
+doing.
+
+The one time command to load the image (depending on your system configuration
+you may need to prefix this with sudo):
+
+docker load < kb-<version>.tgz
+
+Example command to run a container (depending on your system configuration you
+may need to prefix this with sudo): 
+
+docker run -d --name=aCorpus --restart=always \
+	--env POSTGRES_PASSWORD=<password> -p 7900:5432 -p 7901:8089 \
+	-v /var/lib/data deft/kb
+
+env options:
+POSTGRES_PASSWORD :       Sets the superuser password for the initial database at the
+                          initial run. NO DEFAULT! 
+                          WARNING: if no password is set in the run command, then the
+                          database will be set to 'trust' authentication mode and no
+                          passwords will be required for access locally. The image
+                          will still attempt to enable password authentication for
+                          network access.
+POSTGRES_USER     :       Sets the superuser username for the initial database at the
+                          initial run. Defaults to 'postgres'. Generally this is fine
+                          for A2KD.
+POSTGRES_DB       :       Define the name for the default database. Defaults to the
+                          value of POSTGRES_USER. Generally not used for A2KD.
+
+To test that the docker container is working, add it as a server in pgAdmin and verify 
+that you can connect to it.
+
+Once the container has been created, it can be stopped and started using the Docker 
+stop and start commands:
+
+  docker stop aCorpus
+
+  docker start aCorpus
+
+The container can be saved away as an image for backup purposes. To do this:
+
+  docker stop aCorpus
+  docker commit --message "Backup $(date)" aCorpus deft/aCorpus-$(date +%y%m%d-%k%M%S)
+  docker start aCorpus
+
+The image created from this sequence can be saved to a tar file, moved to another 
+docker host, and loaded there:
+
+  docker save deft/aCorpus-170621-131422 | gzip >aCorpus-170621-131422.tgz
+  <move file to another host>
+  docker load -i aCorpus-170621-131422.tgz 
+
+The data from both of these databases is stored under /var/lib/data, which is
+defined as a Docker data volume in the image. If you want to store this data on
+the hosting machine file system (for backup purposes, for instances) you can map
+this to the host file system by modifying the -v option in the commands below by
+specifying a host directory:
+
+docker run -d --name=myCorpus --restart=always \
+	--env POSTGRES_PASSWORD=<password> -p 7900:5432 -p 7901:8089 \
+	-v /data/myCorpus:/var/lib/data deft/kb
+
+The above command places the corpus data under /data/myCorpus directory on the
+hosting machine file system.
+

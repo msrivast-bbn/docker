@@ -1,0 +1,180 @@
+#!/bin/bash
+set -e
+
+#
+# postgresql-setup - Initialization and upgrade operations for PostgreSQL
+
+PGENGINE=/usr/pgsql-9.6/bin
+
+SERVICE_NAME=postgresql
+
+PGTOP=${PGTOP:-"/var/lib/data/pgsql"}
+PGDATA=${PGDATA:-"$PGTOP/data"}
+PGPORT="5432"
+
+# Log file for initdb
+PGLOG="$PGTOP/initdb.log"
+
+export PGDATA
+export PGPORT
+
+# For SELinux we need to use 'runuser' not 'su'
+if [ -x /sbin/runuser ]; then
+    SU=runuser
+else
+    SU=su
+fi
+
+script_result=0
+
+file_env() {
+	local var="$1"
+	local fileVar="${var}_FILE"
+	local def="${2:-}"
+	if [ "${!var:-}" ] && [ "${!fileVar:-}" ]; then
+		echo >&2 "error: both $var and $fileVar are set (but are exclusive)"
+		exit 1
+	fi
+	local val="$def"
+	if [ "${!var:-}" ]; then
+		val="${!var}"
+	elif [ "${!fileVar:-}" ]; then
+		val="$(< "${!fileVar}")"
+	fi
+	export "$var"="$val"
+	unset "$fileVar"
+}
+
+perform_initdb(){
+    if [ ! -e "$PGDATA" ]; then
+        mkdir -p "$PGDATA" || return 1
+        chown postgres:postgres "$PGDATA"
+        chmod 700 "$PGDATA"
+    fi
+    # Clean up SELinux tagging for PGDATA
+    [ -x /sbin/restorecon ] && /sbin/restorecon "$PGDATA"
+
+    # Create the initdb log file if needed
+    if [ ! -e "$PGLOG" -a ! -h "$PGLOG" ]; then
+        touch "$PGLOG" || return 1
+        chown postgres:postgres "$PGLOG"
+        chmod 644 "$PGLOG"
+        [ -x /sbin/restorecon ] && /sbin/restorecon "$PGLOG"
+    fi
+
+    if [ ! -e "/var/run/postgresql" ]; then
+        mkdir -p "/var/run/postgresql"
+        chown postgres:postgres "/var/run/postgresql"
+        chmod 755 "/var/run/postgresql"
+        [ -x /sbin/restorecon ] && /sbin/restorecon "/var/run/postgresql"
+    fi
+
+    # Create directory for postmaster log files
+    if [ ! -e "$PGLOG" -a ! -h "$PGLOG" ]; then
+        mkdir -p "$PGDATA/pg_log"
+        chown postgres:postgres "$PGDATA/pg_log"
+        chmod 700 "$PGDATA/pg_log"
+        [ -x /sbin/restorecon ] && /sbin/restorecon "$PGDATA/pg_log"
+    fi
+
+    # Initialize the database
+    $SU -l postgres -c "$PGENGINE/initdb --pgdata='$PGDATA' --auth='ident'" \
+                    >> "$PGLOG" 2>&1 < /dev/null
+
+    mv /postgresql.conf "$PGDATA"
+    chown postgres:postgres "$PGDATA/postgresql.conf"
+    chmod 744 "$PGDATA/postgresql.conf"
+    [ -x /sbin/restorecon ] && /sbin/restorecon "$PGDATA/postgresql.conf"
+
+    file_env 'POSTGRES_PASSWORD'
+    if [ "$POSTGRES_PASSWORD" ]; then
+        pass="PASSWORD '$POSTGRES_PASSWORD'"
+        authMethod=md5
+    else
+        cat >&2 <<-'EOWARN'
+		****************************************************
+		WARNING: No password has been set for the database.
+		         This will allow anyone with access to the
+		         PostgreSQL port to access your database. In
+		         Docker's default configuration, this is 
+		         effectively any other container on the same
+		         system.
+
+		         Use "-e POSTGRES_PASSWORD=<password> in the
+		         "docker run" command used to create this
+		         container to set a password for the 
+		         database administrator.
+		****************************************************
+
+	EOWARN
+        pass=
+        authMethod=trust
+    fi
+
+    {
+        echo
+        echo "host all all all $authMethod"
+    } >> "$PGDATA/pg_hba.conf"
+
+    $SU -l postgres -c "PGUSER=\"${PGUSER:-postgres}\" \
+    \"$PGENGINE/pg_ctl\" -D \"$PGDATA\" -o \"-c listen_addresses='localhost'\" -w start"
+
+    file_env 'POSTGRES_USER' 'postgres'
+    file_env 'POSTGRES_DB' "$POSTGRES_USER"
+
+    psql=( psql -v ON_ERROR_STOP=1 )
+    if [ "$POSTGRES_DB" != 'postgres' ]; then
+        $SU -l postgres -c "${psql[@]} --username postgres <<-EOSQL
+		CREATE DATABASE "$POSTGRES_DB" ;
+	EOSQL
+        echo"
+    fi
+
+    if [ "$POSTGRES_USER" = 'postgres' ]; then
+        op='ALTER'
+    else
+        op='CREATE'
+    fi
+    $SU -l postgres -c "${psql[@]} --username postgres <<-EOSQL
+		$op USER "$POSTGRES_USER" WITH SUPERUSER $pass ;
+	EOSQL
+    echo"
+
+    psql+=( --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" )
+
+    echo
+
+    $SU -l postgres -c "PGUSER=\"${PGUSER:-postgres}\" \
+    \"$PGENGINE/pg_ctl\" -D \"$PGDATA\" -m fast -w stop"
+
+    echo
+    echo 'PostgreSQL init process complete; ready for start up.'
+    echo
+
+    if [ -f "$PGDATA/PG_VERSION" ]; then
+        return 0
+    fi
+    return 1
+}
+
+initdb(){
+    if [ -f "$PGDATA/PG_VERSION" ]; then
+        echo "Data directory is not empty!"
+        echo
+        script_result=1
+    else
+        echo -n "Initializing database ... "
+        if perform_initdb; then
+            echo "OK"
+        else
+            echo "failed, see $PGLOG"
+            script_result=1
+        fi
+        echo
+    fi
+}
+
+initdb
+
+exit $script_result
+
