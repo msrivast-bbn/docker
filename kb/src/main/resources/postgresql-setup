@@ -15,15 +15,7 @@ PGPORT="5432"
 # Log file for initdb
 PGLOG="$PGTOP/initdb.log"
 
-export PGDATA
-export PGPORT
-
-# For SELinux we need to use 'runuser' not 'su'
-if [ -x /sbin/runuser ]; then
-    SU=runuser
-else
-    SU=su
-fi
+export PGDATA PGPORT PGENGINE PGTOP PGLOG
 
 script_result=0
 
@@ -51,22 +43,18 @@ perform_initdb(){
         chown postgres:postgres "$PGDATA"
         chmod 700 "$PGDATA"
     fi
-    # Clean up SELinux tagging for PGDATA
-    [ -x /sbin/restorecon ] && /sbin/restorecon "$PGDATA"
 
     # Create the initdb log file if needed
     if [ ! -e "$PGLOG" -a ! -h "$PGLOG" ]; then
         touch "$PGLOG" || return 1
         chown postgres:postgres "$PGLOG"
         chmod 644 "$PGLOG"
-        [ -x /sbin/restorecon ] && /sbin/restorecon "$PGLOG"
     fi
 
-    if [ ! -e "/var/run/postgresql" ]; then
-        mkdir -p "/var/run/postgresql"
-        chown postgres:postgres "/var/run/postgresql"
-        chmod 755 "/var/run/postgresql"
-        [ -x /sbin/restorecon ] && /sbin/restorecon "/var/run/postgresql"
+    if [ ! -e "/run/postgresql" ]; then
+        mkdir -p "/run/postgresql"
+        chown postgres:postgres "/run/postgresql"
+        chmod 755 "/run/postgresql"
     fi
 
     # Create directory for postmaster log files
@@ -74,17 +62,18 @@ perform_initdb(){
         mkdir -p "$PGDATA/pg_log"
         chown postgres:postgres "$PGDATA/pg_log"
         chmod 700 "$PGDATA/pg_log"
-        [ -x /sbin/restorecon ] && /sbin/restorecon "$PGDATA/pg_log"
     fi
 
     # Initialize the database
-    $SU -l postgres -c "$PGENGINE/initdb --pgdata='$PGDATA' --auth='ident'" \
-                    >> "$PGLOG" 2>&1 < /dev/null
+    cat >/tmp/s1 <<SUDO
+$PGENGINE/initdb --pgdata=$PGDATA >> $PGLOG 2>&1 < /dev/null
+SUDO
+    chmod +x /tmp/s1
+    su -l postgres -s /bin/bash -c /tmp/s1
 
     mv /postgresql.conf "$PGDATA"
     chown postgres:postgres "$PGDATA/postgresql.conf"
     chmod 744 "$PGDATA/postgresql.conf"
-    [ -x /sbin/restorecon ] && /sbin/restorecon "$PGDATA/postgresql.conf"
 
     file_env 'POSTGRES_PASSWORD'
     if [ "$POSTGRES_PASSWORD" ]; then
@@ -116,18 +105,23 @@ perform_initdb(){
         echo "host all all all $authMethod"
     } >> "$PGDATA/pg_hba.conf"
 
-    $SU -l postgres -c "PGUSER=\"${PGUSER:-postgres}\" \
-    \"$PGENGINE/pg_ctl\" -D \"$PGDATA\" -o \"-c listen_addresses='localhost'\" -w start"
+    cat >/tmp/s2 <<SUDO
+PGUSER=${PGUSER:-postgres} $PGENGINE/pg_ctl -D $PGDATA -o "-c listen_addresses='localhost'" -w start
+SUDO
+    chmod +x /tmp/s2
+    su -l postgres -s /bin/bash -c /tmp/s2
 
     file_env 'POSTGRES_USER' 'postgres'
     file_env 'POSTGRES_DB' "$POSTGRES_USER"
 
-    psql=( psql -v ON_ERROR_STOP=1 )
+    psql=( $PGENGINE/psql -v ON_ERROR_STOP=1 )
     if [ "$POSTGRES_DB" != 'postgres' ]; then
-        $SU -l postgres -c "${psql[@]} --username postgres <<-EOSQL
-		CREATE DATABASE "$POSTGRES_DB" ;
-	EOSQL
-        echo"
+        cat >/tmp/s3 <<SUDO
+echo "CREATE DATABASE $POSTGRES_DB\;" | ${psql[@]} --username postgres
+echo
+SUDO
+        chmod +x /tmp/s3
+        su -l postgres -s /bin/bash -c /tmp/s3
     fi
 
     if [ "$POSTGRES_USER" = 'postgres' ]; then
@@ -135,19 +129,24 @@ perform_initdb(){
     else
         op='CREATE'
     fi
-    $SU -l postgres -c "${psql[@]} --username postgres <<-EOSQL
-		$op USER "$POSTGRES_USER" WITH SUPERUSER $pass ;
-	EOSQL
-    echo"
+    cat >/tmp/s4 <<SUDO
+echo "$op USER "$POSTGRES_USER" WITH SUPERUSER $pass \;" | ${psql[@]} --username postgres 
+echo
+SUDO
+    chmod +x /tmp/s4
+    su -l postgres -s /bin/bash -c /tmp/s4
 
     psql+=( --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" )
 
     echo
 
-    $SU -l postgres -c "PGUSER=\"${PGUSER:-postgres}\" \
-    \"$PGENGINE/pg_ctl\" -D \"$PGDATA\" -m fast -w stop"
+    cat >/tmp/s5 <<SUDO
+PGUSER=${PGUSER:-postgres} $PGENGINE/pg_ctl -D $PGDATA -m fast -w stop
+echo
+SUDO
+    chmod +x /tmp/s5
+    su -l postgres -s /bin/bash -c /tmp/s5
 
-    echo
     echo 'PostgreSQL init process complete; ready for start up.'
     echo
 
