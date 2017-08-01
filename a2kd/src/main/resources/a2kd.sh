@@ -59,11 +59,22 @@ log "running spark-submit"
 EAS="$ext_classpath"
 EXT_CP="/classes:${EAS}/*:${EAS}/classes"
 
+executor_memory=${executor_memory:-60g}
+driver_memory=${driver_memory:-60g}
+unset DMO EMO
+if [ "$executor_memoryOverhead" ]; then
+  EMO="--conf spark.yarn.executor.memoryOverhead=$executor_memoryOverhead"
+fi
+if [ "$driver_memoryOverhead" ]; then
+  DMO="--conf spark.yarn.driver.memoryOverhead=$driver_memoryOverhead"
+fi
+
 cat <<EOF
 ${SPARK_HOME}/bin/spark-submit \
-	--driver-memory ${driver_memory:-80g} \
-	--executor-memory ${executor_memory:-80g} \
+	--driver-memory ${driver_memory:-80g} $DMO \
+	--executor-memory ${executor_memory:-80g} $EMO \
 	--conf spark.driver.cores=${driver_cores:-1} \
+        --conf spark.yarn.driver.memory
         --conf spark.executor.extraClassPath="${EXT_CP}" \
         --conf spark.driver.extraClassPath="${EXT_CP}" \
 	--conf spark.eventLog.enabled=${eventlog_enabled:-true} \
@@ -85,8 +96,8 @@ ${SPARK_HOME}/bin/spark-submit \
 EOF
 
 ${SPARK_HOME}/bin/spark-submit \
-	--driver-memory ${driver_memory:-80g} \
-	--executor-memory ${executor_memory:-80g} \
+	--driver-memory ${driver_memory:-80g} $DMO \
+	--executor-memory ${executor_memory:-80g} $EMO \
 	--conf spark.driver.cores=${driver_cores:-1} \
         --conf spark.executor.extraClassPath="${EXT_CP}" \
         --conf spark.driver.extraClassPath="${EXT_CP}" \

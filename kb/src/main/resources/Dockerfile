@@ -36,5 +36,5 @@ VOLUME /var/lib/data
 
 EXPOSE 8089 5432
 
-CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/supervisord.conf"]
 
