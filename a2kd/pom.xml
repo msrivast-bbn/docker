@@ -7,8 +7,8 @@
       <version>2.7.1-SNAPSHOT</version>
       <relativePath>../pom.xml</relativePath>
     </parent>
-    <artifactId>e2e</artifactId>
-    <name>e2e</name>
+    <artifactId>a2kd</artifactId>
+    <name>a2kd</name>
     <description>A Docker image of the Adept E2E system</description>
     <dependencies>
       <dependency>
@@ -149,6 +149,13 @@
                           <verbose>true</verbose>
                         </configuration>
                     </execution>
+                    <execution>
+                      <id>save</id>
+                      <phase>install</phase>
+                      <goals>
+                      	<goal>save</goal>
+                      </goals>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -288,7 +295,7 @@
           </configuration>
           <executions>
             <execution>
-              <id>create-confignscripts</id>
+              <id>create-utilities</id>
               <phase>prepare-package</phase>
               <goals>
                 <goal>single</goal>

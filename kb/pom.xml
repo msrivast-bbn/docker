@@ -7,9 +7,9 @@
       <version>2.7.1-SNAPSHOT</version>
       <relativePath>../pom.xml</relativePath>
     </parent>
-    <artifactId>knowledgebase</artifactId>
+    <artifactId>kb</artifactId>
     <version>2.7.1-SNAPSHOT</version>
-    <name>knowledgebase</name>
+    <name>kb</name>
     <description>A Docker image with the Parliament Triple-Store AND Postgres</description>
     <properties>
       <parliament-version>2.7.10</parliament-version>
