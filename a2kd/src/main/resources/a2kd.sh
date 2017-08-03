@@ -28,6 +28,7 @@ log() {
 }
 
 # read and parse the configuration file for the values of interest
+exec $(java -cp $(dirname $0)/../lib/\\* adept.e2e.driver.E2eConfig)
 while read line; do
     [[ "$line" =~ ^([[:space:]]*<entry[[:space:]]+key=\")([^\"]+)(\"[[:space:]]*>)([^<]*)(<[[:space:]]*/entry[[:space:]]*>) ]] && declare ${BASH_REMATCH[2]}=${BASH_REMATCH[4]}
 done < "/a2kd_config"
@@ -74,9 +75,8 @@ ${SPARK_HOME}/bin/spark-submit \
 	--driver-memory ${driver_memory:-80g} $DMO \
 	--executor-memory ${executor_memory:-80g} $EMO \
 	--conf spark.driver.cores=${driver_cores:-1} \
-        --conf spark.yarn.driver.memory
-        --conf spark.executor.extraClassPath="${EXT_CP}" \
-        --conf spark.driver.extraClassPath="${EXT_CP}" \
+    --conf spark.executor.extraClassPath="${EXT_CP}" \
+    --conf spark.driver.extraClassPath="${EXT_CP}" \
 	--conf spark.eventLog.enabled=${eventlog_enabled:-true} \
 	--conf spark.eventLog.dir="${spark_eventLog_dir_hdfs}" \
 	--conf spark.ui.killEnabled=${kill_enabled:-true} \

@@ -84,7 +84,8 @@
   <modules>
     <module>postgres</module>
     <module>parliament</module>
-    <module>e2e</module>
+    <module>kb</module>
+    <module>a2kd</module>
     <!--module>nextcentury</module-->
   </modules>
 </project>
