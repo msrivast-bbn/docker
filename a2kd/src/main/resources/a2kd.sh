@@ -28,10 +28,7 @@ log() {
 }
 
 # read and parse the configuration file for the values of interest
-exec $(java -cp $(dirname $0)/../lib/\\* adept.e2e.driver.E2eConfig)
-while read line; do
-    [[ "$line" =~ ^([[:space:]]*<entry[[:space:]]+key=\")([^\"]+)(\"[[:space:]]*>)([^<]*)(<[[:space:]]*/entry[[:space:]]*>) ]] && declare ${BASH_REMATCH[2]}=${BASH_REMATCH[4]}
-done < "/a2kd_config"
+eval $(java -cp $(dirname $0)/../lib/\* adept.e2e.driver.E2eConfig /a2kd_config)
 
 timestamp=$(date +%s)
 log "the UTC timestamp/id of this script execution is $timestamp"
@@ -46,7 +43,7 @@ ls -l "$config_shared"
 log "creating KB schema"
 
 cat "$A2KD_HOME/etc/DEFT KB create schema.txt" \
-	| PGPASSWORD="${metadata_password}" psql -d "${metadata_db}" -U "${metadata_user_name}" -h "${metadata_host}" -p ${metadata_port} -f -
+	| PGPASSWORD="${password}" psql -d "${dbName}" -U "${username}" -h "${host}" -p ${port} -f -
 
 input_dir_hdfs="$(basename "$input_dir")_input_${timestamp}"
 log "uploading local input directory to hdfs"
@@ -89,7 +86,7 @@ ${SPARK_HOME}/bin/spark-submit \
 	--conf spark.speculation.multiplier=${speculation_multiplier:-2} \
 	--class adept.e2e.driver.E2eDriver \
 	--master ${master:-yarn} \
-        --deploy-mode ${deploymode:-cluster} \
+    --deploy-mode ${deploymode:-cluster} \
 	--queue ${queue:-pool1} \
 	--conf spark.storage.blockManagerTimeoutInterval=${storage_blockmanagertimeoutinterval:-100000} \
 	"${A2KD_HOME}/lib/adept-e2e.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find /input -maxdepth 1 -type f | wc -l)" "$config_shared"

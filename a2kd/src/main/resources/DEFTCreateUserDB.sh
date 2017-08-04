@@ -6,8 +6,8 @@ function help() {
   Create a new database using information from the specified A2KD configuration 
   file. 
 
-  This command uses the metadata_host, metadata_port, metadata_user_name,
-  metadata_password and metadata_db parameters in the A2KD configuration file
+  This command uses the host, port, username,
+  metadata_password and dbName parameters in the A2KD configuration file
   to connect to a PostgreSQL database instance and checks to see if a database
   instance already exists there. If it does, it checks with the user to ensure
   that the destruction of the existing database is all right. If the user
@@ -16,7 +16,7 @@ function help() {
 
   If an existing PostgreSQL database instance is deleted, the command will also
   clean out any existing data from the Parliament Triple Store using the
-  triple_store_url parameter from the configuration file.
+  url parameter from the configuration file.
 EOF
 }
 
@@ -48,15 +48,13 @@ hash wget 2>/dev/null || { echo >&2 "I require wget but it's not installed or in
 hash psql 2>/dev/null || { echo >&2 "I require psql but it's not installed or in your PATH.  Aborting."; exit 1; }
 
 # read and parse the configuration file for the values of interest
-while read line; do
-    [[ "$line" =~ ^([[:space:]]*<entry[[:space:]]+key=\")([^\"]+)(\"[[:space:]]*>)([^<]*)(<[[:space:]]*/entry[[:space:]]*>) ]] && declare ${BASH_REMATCH[2]}=${BASH_REMATCH[4]}
-done < "$1"
+eval $(java -cp $(dirname $0)/../lib/\* adept.e2e.driver.E2eConfig $1)
 
-for param in metadata_host metadata_db metadata_user_name metadata_password metadata_port triple_store_url; do
+for param in host dbName username password port url; do
   eval value="\$$param"
   if [ ! "$value" ] ; then
-    if [ "$param" = metadata_password ] ; then
-      echo "WARN: metadata_password is empty or not set. This may be an error, or it is not secure at all!"
+    if [ "$param" = password ] ; then
+      echo "WARN: password is empty or not set. This may be an error, or it is not secure at all!"
     else
       echo "ERROR: $param is not set or is empty in $1"
       exit 1
@@ -72,24 +70,24 @@ read -e -p "Enter DB Administrator password: " presadminpw
 echo
 umask 077
 export PGPASSFILE=~/.pgpass$$
-echo "${metadata_host}:${metadata_port}:*:${presadmin}:${presadminpw}" >$PGPASSFILE
-echo "${metadata_host}:${metadata_port}:${metadata_db}:${metadata_user_name}:${metadata_password}" >>$PGPASSFILE
-echo "${metadata_host}:${metadata_port}:postgres:${metadata_user_name}:${metadata_password}" >>$PGPASSFILE
-echo "${metadata_host}:${metadata_port}:${presadmin}:${metadata_user_name}:${metadata_password}" >>$PGPASSFILE
+echo "${host}:${port}:*:${presadmin}:${presadminpw}" >$PGPASSFILE
+echo "${host}:${port}:${dbName}:${username}:${metadata_password}" >>$PGPASSFILE
+echo "${host}:${port}:postgres:${username}:${metadata_password}" >>$PGPASSFILE
+echo "${host}:${port}:${presadmin}:${username}:${metadata_password}" >>$PGPASSFILE
 trap 'rm -f $PGPASSFILE' EXIT
 umask 027
 chmod 400 $PGPASSFILE
 unset presadminpw 
 
 # Is the database there?
-psql -U "$presadmin" -h "$metadata_host" -p "$metadata_port" -lqt >/dev/null
+psql -U "$presadmin" -h "$host" -p "$port" -lqt >/dev/null
 if [ $? -ne 0 ] ; then
   echo "Attempt to access the database failed!"
   exit 0
 fi
 
 # is the triple store there?
-wget --output-document=/dev/null --quiet "$triple_store_url"
+wget --output-document=/dev/null --quiet "$url"
 if [ $? -ne 0 ] ; then
   echo "Attempt to access the triple store failed!"
   exit 0
@@ -153,71 +151,71 @@ function clearTripleStore() {
 }
 
 # Does the user exist?
-if userExists "$metadata_user_name" "$metadata_host" "$metadata_port" ; then
+if userExists "$username" "$host" "$port" ; then
   # yes. Check the password
-  if passwordValid  "$metadata_user_name" "$metadata_password"  "$metadata_host" "$metadata_port"; then 
-    echo "User $metadata_user_name exists and password is good"
+  if passwordValid  "$username" "$metadata_password"  "$host" "$port"; then 
+    echo "User $username exists and password is good"
   else
     echo "The password in the configuration file is incorrect. Please take appropriate action"
     exit 1
   fi
 else
   # no. Create the user and set the password.
-  createUser "$metadata_user_name" "$metadata_password"  "$metadata_host" "$metadata_port"
+  createUser "$username" "$metadata_password"  "$host" "$port"
 fi
 
 createNew=1
 
 # Does the database exist?
-if databaseExists "$metadata_db" "$metadata_host" "$metadata_port" ; then
+if databaseExists "$dbName" "$host" "$port" ; then
   # Yes. See if it has been initialized.
-  if databaseInitialized  "$metadata_db" "$metadata_host" "$metadata_port" ; then
+  if databaseInitialized  "$dbName" "$host" "$port" ; then
     # yes. see if it has been populated
-    if databasePopulated "$metadata_db" "$metadata_host" "$metadata_port" ; then
+    if databasePopulated "$dbName" "$host" "$port" ; then
       # OK, ask
-      echo "The database $metadata_db on $metadata_host:$metadata_port already exists and is populated with data"
+      echo "The database $dbName on $host:$port already exists and is populated with data"
       read -p 'Do you want to overwrite it? (y/N): ' ans
       if [ ${${ans:0:1},,} = y ] ; then
         read -p 'Are you sure? (y/N): ' ans
         if [ ${${ans:0:1},,} = y ] ; then
           # remove existing
-          deleteDatabase "$metadata_db" "$metadata_host" "$metadata_port"
-          clearTripleStore "$triple_store_url"
+          deleteDatabase "$dbName" "$host" "$port"
+          clearTripleStore "$url"
           createNew=0
         fi
       fi
     else
       # empty database...delete 
-      deleteDatabase "$metadata_db" "$metadata_host" "$metadata_port"
-      clearTripleStore "$triple_store_url"
+      deleteDatabase "$dbName" "$host" "$port"
+      clearTripleStore "$url"
       createNew=0
     fi
   else
     # uninitialized database, delete
-    deleteDatabase "$metadata_db" "$metadata_host" "$metadata_port"
-    clearTripleStore "$triple_store_url"
+    deleteDatabase "$dbName" "$host" "$port"
+    clearTripleStore "$url"
     createNew=0
   fi
 else
-  #empry database - delete
-  deleteDatabase "$metadata_db" "$metadata_host" "$metadata_port"
-  clearTripleStore "$triple_store_url"
+  #empty database - delete
+  deleteDatabase "$dbName" "$host" "$port"
+  clearTripleStore "$url"
   createNew=0
 fi
 
 if [ $createNew -eq 0 ] ; then
-  psql -U "$presadmin" -h "${metadata_host}" -p "${metadata_port}" --quiet <<-EOF
-	CREATE DATABASE $metadata_db WITH OWNER $metadata_user_name;
-	GRANT ALL ON DATABASE $metadata_db TO $metadata_user_name;
+  psql -U "$presadmin" -h "${host}" -p "${port}" --quiet <<-EOF
+	CREATE DATABASE $dbName WITH OWNER $username;
+	GRANT ALL ON DATABASE $dbName TO $username;
 EOF
-  psql -U "$presadmin" -h "$metadata_host" -p "$metadata_port" -d "$metadata_db" --quiet <<-EOF
-	ALTER SCHEMA public OWNER TO $metadata_user_name;
-	GRANT ALL ON SCHEMA public TO $metadata_user_name;
+  psql -U "$presadmin" -h "$host" -p "$port" -d "$dbName" --quiet <<-EOF
+	ALTER SCHEMA public OWNER TO $username;
+	GRANT ALL ON SCHEMA public TO $username;
 EOF
 echo
 echo "-----"
-echo "Database $metadata_db has been created on $metadata_host:$metadata_port"
-echo "and is ready for use by user $metadata_user_name. The triple store at"
-echo "${triple_store_url%/parliament} has been cleared as well."
+echo "Database $dbName has been created on $host:$port"
+echo "and is ready for use by user $username. The triple store at"
+echo "${url%/parliament} has been cleared as well."
 fi
 exit 0
