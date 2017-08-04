@@ -11,7 +11,6 @@
       <outputDirectory></outputDirectory>
       <includes>
         <include>*.txt</include>
-        <include>a2kd_config.xml</include>
       </includes>
     </fileSet>
     <fileSet>
@@ -37,8 +36,9 @@
       <filtered>true</filtered>
     </file>
     <file>
-      <source>src/main/resources/a2kd_config.xml</source>
+      <source>${project.build.outputDirectory}/e2e_config.template.xml</source>
       <outputDirectory>conf</outputDirectory>
+      <destName>a2kd_config.template.xml</destName>
       <fileMode>444</fileMode>
       <lineEnding>unix</lineEnding>
       <filtered>true</filtered>
