@@ -7,7 +7,7 @@ function help() {
   file. 
 
   This command uses the host, port, username,
-  metadata_password and dbName parameters in the A2KD configuration file
+  password and dbName parameters in the A2KD configuration file
   to connect to a PostgreSQL database instance and checks to see if a database
   instance already exists there. If it does, it checks with the user to ensure
   that the destruction of the existing database is all right. If the user
@@ -71,9 +71,7 @@ echo
 umask 077
 export PGPASSFILE=~/.pgpass$$
 echo "${host}:${port}:*:${presadmin}:${presadminpw}" >$PGPASSFILE
-echo "${host}:${port}:${dbName}:${username}:${metadata_password}" >>$PGPASSFILE
-echo "${host}:${port}:postgres:${username}:${metadata_password}" >>$PGPASSFILE
-echo "${host}:${port}:${presadmin}:${username}:${metadata_password}" >>$PGPASSFILE
+echo "${host}:${port}:*:${username}:${password}" >>$PGPASSFILE
 trap 'rm -f $PGPASSFILE' EXIT
 umask 027
 chmod 400 $PGPASSFILE
@@ -153,7 +151,7 @@ function clearTripleStore() {
 # Does the user exist?
 if userExists "$username" "$host" "$port" ; then
   # yes. Check the password
-  if passwordValid  "$username" "$metadata_password"  "$host" "$port"; then 
+  if passwordValid  "$username" "$password"  "$host" "$port"; then 
     echo "User $username exists and password is good"
   else
     echo "The password in the configuration file is incorrect. Please take appropriate action"
@@ -161,7 +159,7 @@ if userExists "$username" "$host" "$port" ; then
   fi
 else
   # no. Create the user and set the password.
-  createUser "$username" "$metadata_password"  "$host" "$port"
+  createUser "$username" "$password"  "$host" "$port"
 fi
 
 createNew=1
