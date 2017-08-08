@@ -103,7 +103,7 @@ log "downloading output directory from hdfs"
 hdfs dfs -get "${output_dir_hdfs}" /output
 
 log "removing temporary hdfs directories, a2kd configuration file"
-hdfs dfs -rmr -skipTrash "${input_dir_hdfs}" "${output_dir_hdfs}"
+hdfs dfs -rm -r -skipTrash "${input_dir_hdfs}" "${output_dir_hdfs}"
 rm -f "$config_shared"
 
 log "spark.eventLog.dir: ${spark_eventLog_dir_hdfs}"
