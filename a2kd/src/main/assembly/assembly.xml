@@ -44,6 +44,14 @@
       <filtered>true</filtered>
     </file>
     <file>
+      <source>${project.build.outputDirectory}/spark.template.conf</source>
+      <outputDirectory>conf</outputDirectory>
+      <destName>spark.template.conf</destName>
+      <fileMode>444</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
+    <file>
       <source>src/main/resources/KB.xml</source>
       <outputDirectory>conf</outputDirectory>
       <fileMode>444</fileMode>

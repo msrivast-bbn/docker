@@ -1,8 +1,30 @@
 #!/bin/bash
 # Script run within the docker container to start the actual A2KD Run.
+# /input contains:
+#   /input/partitions - a file containing the number of partitions to use.
+#   /input/ddPartitions - a file containing the number of document deduplication partitions to use.
+#   /input/config.xml - a file containing the A2KD Configuration file.
+#   /input/spark.conf - a file containing the Spark properties file.
+#   /input/languages - a file containing a space-separated list of language codes
+# The docker container will have the following volumes:
+#   /input - mount to /tmp/input$$ containing the files listed above
+#   /output - mount to output directory
+#   /{EN|ZH|ES} - mounts to the directories containing input files - the name being a language code
+#   /hadoop - a mount to the HADOOP configuration directory
+#   /sharedTop - a mount to the shared_top directory
+# The following environment variables are defined:
+#    LOCAL_USER_ID - the numeric id of the user that invoked runa2kd
+#    LOCAL_USER_NAME - the name of the user that invoked runa2kd
+#    LOCAL_GROUP_ID -  The numeric id of the current group of the user that invoked runa2kd
+#    LOCAL_GROUP_NAME - The name of the current group of the user that invoked runa2kd
+#    shared_top - the path to the shared directory on the 'outside', we will recreate that in the container
+#                 This path was created by entrypoint.sh and is accessible
+#    HADOOP_CONF_DIR points to /hadoop
+#
 set -eu
 set -o pipefail
 
+echo Starting A2KD.sh - running as $(id)
 trap '
 	exit_status=$?; \
 	exit_command="${BASH_COMMAND}"; \
@@ -12,23 +34,20 @@ trap '
 	fi' \
 EXIT
 
-if [[ $# -ne 3 ]]; then
-	echo "Usage: $(basename $0) <input dir path> <num partitions> <num executors>"
-	echo "e.g.:"
-	echo "  $(basename $0) ~/input 1 1"
-	echo "Exiting"
-	exit 1
-fi
-input_dir="$1"
-num_partitions="$2"
-num_executors="$3"
-
 log() {
 	echo ">>> $1"
 }
 
-# read and parse the configuration file for the values of interest
-eval $(java -cp $(dirname $0)/../lib/\* adept.e2e.driver.E2eConfig /a2kd_config)
+if [[ $# -ne 0 ]]; then
+	echo "Usage: $(basename $0)"
+	echo "e.g.:"
+	echo "  $(basename $0)"
+	echo "Exiting"
+	exit 1
+fi
+
+num_partitions=$(cat /input/partitions)
+num_ddPartitions=$(cat /input/ddPartitions)
 
 timestamp=$(date +%s)
 log "the UTC timestamp/id of this script execution is $timestamp"
@@ -36,92 +55,58 @@ log "the UTC timestamp/id of this script execution is $timestamp"
 log "a2kd preparation started"
 config_shared_directory="${shared_top%/}/$(id -un)"
 mkdir -p "$config_shared_directory"
-config_shared="${config_shared_directory}/a2kd_config_${timestamp}.xml"
+config_shared="${config_shared_directory}/config_${timestamp}.xml"
 rm -f "$config_shared"
-cp "/a2kd_config" "$config_shared"
-ls -l "$config_shared"
-log "creating KB schema"
 
+log "creating KB schema"
+# Get kb parameters from config file
+port=$(xmlstarlet sel -T -t -m "/config/kb_config/metadata_db/@port" -v . -n /input/config.xml)
+host=$(xmlstarlet sel -T -t -m "/config/kb_config/metadata_db/@host" -v . -n /input/config.xml)
+username=$(xmlstarlet sel -T -t -m "/config/kb_config/metadata_db/@username" -v . -n /input/config.xml)
+dbName=$(xmlstarlet sel -T -t -m "/config/kb_config/metadata_db/@dbName" -v . -n /input/config.xml)
+password=$(xmlstarlet sel -T -t -m "/config/kb_config/metadata_db/@password" -v . -n /input/config.xml)
+
+# use them to ensure the schema has been created
 cat "$A2KD_HOME/etc/DEFT KB create schema.txt" \
 	| PGPASSWORD="${password}" psql -d "${dbName}" -U "${username}" -h "${host}" -p ${port} -f -
 
-input_dir_hdfs="$(basename "$input_dir")_input_${timestamp}"
-log "uploading local input directory to hdfs"
-hdfs dfs -put "/input" "$input_dir_hdfs"
-output_dir_hdfs="a2kd_output_${timestamp}"
+log "Uploading input to HDFS"
+input_dir_hdfs="input_${timestamp}"
+log "uploading local input directory/ies to hdfs"
+languages=$(cat /input/languages)
+cp /input/config.xml /tmp
+# copy in the input data, and then update the config file to the new location in hdfs for each language
+hdfs dfs -mkdir "$input_dir_hdfs"
+for lang in $languages; do
+  hdfs dfs -mkdir "$input_dir_hdfs/${lang}"
+  hdfs dfs -put "/${lang}" "$input_dir_hdfs/${lang}"
+  # update path in shared copy of a2kd_config file
+  xmlstarlet ed -u "/config/algorithm_set[@language="$lang"]/input_directory" -v "${input_dir_hdfs}/${lang}" /tmp/config.xml >/tmp/a
+  rm -f /tmp/config.xml
+  mv /tmp/a /tmp/config.xml
+done
+# we are done editing the config file, move it to the shared location
+mv /tmp/config.xml "$config_shared"
+
+output_dir_hdfs="output_${timestamp}"
 spark_eventLog_dir_hdfs="hdfs:///user/$(id -un)/spark_logs/spark_logs_${timestamp}"
-hdfs dfs -mkdir -p "$spark_eventLog_dir_hdfs"
+hdfs dfs -mkdir "$spark_eventLog_dir_hdfs"
 
 log "running spark-submit"
-[ "${ext_classpath:0:1}" = "/" ] || ext_classpath="$shared_top/$ext_classpath"
-EAS="$ext_classpath"
-EXT_CP="/classes:${EAS}/*:${EAS}/classes"
-
-executor_memory=${executor_memory:-60g}
-driver_memory=${driver_memory:-60g}
-unset DMO EMO
-if [ "$executor_memoryOverhead" ]; then
-  EMO="--conf spark.yarn.executor.memoryOverhead=$executor_memoryOverhead"
-fi
-if [ "$driver_memoryOverhead" ]; then
-  DMO="--conf spark.yarn.driver.memoryOverhead=$driver_memoryOverhead"
-fi
-
-cat <<EOF
-${SPARK_HOME}/bin/spark-submit \
-	--driver-memory ${driver_memory:-80g} $DMO \
-	--executor-memory ${executor_memory:-80g} $EMO \
-	--conf spark.driver.cores=${driver_cores:-1} \
-    --conf spark.executor.extraClassPath="${EXT_CP}" \
-    --conf spark.driver.extraClassPath="${EXT_CP}" \
-	--conf spark.eventLog.enabled=${eventlog_enabled:-true} \
-	--conf spark.eventLog.dir="${spark_eventLog_dir_hdfs}" \
-	--conf spark.ui.killEnabled=${kill_enabled:-true} \
-	--conf spark.executor.cores=${executor_cores:-1} \
-	--num-executors ${num_executors} \
-	--conf spark.shuffle.blockTransferService=${shuffle_blocktransferservice:-nio} \
-	--conf spark.dynamicAllocation.enabled=${dynamic_allocation_enabled:-false} \
-	--conf spark.shuffle.service.enabled=${shuffle_service_enabled:-false} \
-	--conf spark.speculation=${speculation:-false} \
-	--conf spark.speculation.multiplier=${speculation_multiplier:-2} \
-	--class adept.e2e.driver.E2eDriver \
-	--master ${master:-yarn} \
-    --deploy-mode ${deploymode:-cluster} \
-	--queue ${queue:-pool1} \
-	--conf spark.storage.blockManagerTimeoutInterval=${storage_blockmanagertimeoutinterval:-100000} \
-	"${A2KD_HOME}/lib/adept-e2e.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find /input -maxdepth 1 -type f | wc -l)" "$config_shared"
-EOF
 
 ${SPARK_HOME}/bin/spark-submit \
-	--driver-memory ${driver_memory:-80g} $DMO \
-	--executor-memory ${executor_memory:-80g} $EMO \
-	--conf spark.driver.cores=${driver_cores:-1} \
-        --conf spark.executor.extraClassPath="${EXT_CP}" \
-        --conf spark.driver.extraClassPath="${EXT_CP}" \
-	--conf spark.eventLog.enabled=${eventlog_enabled:-true} \
-	--conf spark.eventLog.dir="${spark_eventLog_dir_hdfs}" \
-	--conf spark.ui.killEnabled=${kill_enabled:-true} \
-	--conf spark.executor.cores=${executor_cores:-1} \
-	--num-executors ${num_executors} \
-	--conf spark.shuffle.blockTransferService=${shuffle_blocktransferservice:-nio} \
-	--conf spark.dynamicAllocation.enabled=${dynamic_allocation_enabled:-false} \
-	--conf spark.shuffle.service.enabled=${shuffle_service_enabled:-false} \
-	--conf spark.speculation=${speculation:-false} \
-	--conf spark.speculation.multiplier=${speculation_multiplier:-2} \
-	--class adept.e2e.driver.E2eDriver \
-	--master ${master:-yarn} \
-        --deploy-mode ${deploymode:-cluster} \
-	--queue ${queue:-pool1} \
-	--conf spark.storage.blockManagerTimeoutInterval=${storage_blockmanagertimeoutinterval:-100000} \
-	"${A2KD_HOME}/lib/adept-e2e.jar" "${input_dir_hdfs}" "${output_dir_hdfs}" ${num_partitions} "$(find /input -maxdepth 1 -type f | wc -l)" "$config_shared"
+	--class adept.e2e.driver.MainE2eDriver \
+	--properties-file /input/spark.conf \
+	${A2KD_HOME}/lib/adept-e2e.jar ${output_dir_hdfs} ${num_partitions} ${num_ddPartitions} $config_shared
 
 log "downloading output directory from hdfs"
 hdfs dfs -get "${output_dir_hdfs}" /output
 
 log "removing temporary hdfs directories, a2kd configuration file"
-hdfs dfs -rm -r "${input_dir_hdfs}" "${output_dir_hdfs}"
+hdfs dfs -rmr -skipTrash "${input_dir_hdfs}" "${output_dir_hdfs}"
 rm -f "$config_shared"
 
 log "spark.eventLog.dir: ${spark_eventLog_dir_hdfs}"
-log "wrote output to local directory: ${output_dir_hdfs}"
+log "wrote output to local directory"
 
+log "A2KD Processing Complete"

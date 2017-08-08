@@ -1,52 +1,66 @@
 #!/bin/bash
+# /input is mounted from /input and contains:
+#   /input/partitions - a file containing the number of partitions to use.
+#   /input/ddPartitions - a file containing the number of document deduplication partitions to use.
+#   /input/config.xml - a file containing the A2KD Configuration file.
+#   /input/spark.conf - a file containing the Spark properties file.
+#   /input/languages - a file containing a space-separated list of language codes
+# The docker container will have the following volumes:
+#   /input - mount to /tmp/input$$ containing the files listed above
+#   /output - mount to output directory
+#   /{EN|ZH|ES} - mounts to the directories containing input files - the name being a language code
+#   /hadoop - a mount to the HADOOP configuration directory
+#   /sharedTop - a mount to the shared_top directory
+# The following environment variables are defined:
+#    LOCAL_USER_ID - the numeric id of the user that invoked runa2kd
+#    LOCAL_USER_NAME - the name of the user that invoked runa2kd
+#    LOCAL_GROUP_ID -  The numeric id of the current group of the user that invoked runa2kd
+#    LOCAL_GROUP_NAME - The name of the current group of the user that invoked runa2kd
+#    shared_top - the path to the shared directory on the 'outside', we will recreate that in the container
+#
 
-# set up the shared data path while running as root
-if [ "${shared_top}" ] ; then
-  mkdir -p $(dirname "${shared_top}")
-  ln -sf /sharedData "${shared_top}"
-else
-  echo "ERROR: shared_top is not defined!"
-fi
-# copy hadoop and spark configurations
-mkdir /hadoop
-mkdir /spark
-[ -d /conf/hadoop ] && cp -R /conf/hadoop/* /hadoop
-[ -d /conf/spark ] && cp -R /conf/spark/* /spark
-export HADOOP_CONF_DIR=/hadoop
-export SPARK_CONF_DIR=/spark
-if [ ! -f /spark/spark-env.sh ]; then
-  if [ -f /spark/spark-env.sh.template ] ; then
-    cp /spark/spark-env.sh.template /spark/spark-env.sh
-  fi
-fi
-[ -d /classes ] || mkdir /classes && chmod a+rx /classes
-[ -d /scripts ] || mkdir /scripts && chmod a+rx /scripts
-run-parts /scripts
-echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:$(hadoop classpath)" >> /spark/spark-env.sh
-echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:/classes" >> /spark/spark-env.sh
-echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top%/}/${ext_classpath}/*" >> /spark/spark-env.sh
-echo "export SPARK_CLASSPATH=\${SPARK_CLASSPATH}:${shared_top%/}/${ext_classpath}/classes" >> /spark/spark-env.sh
-# set up environment for running as requesting user
-export PATH=${SPARK_HOME}/bin:${A2KD_HOME}/bin:${PATH}
+echo In entrypoint.sh
+
+# Some sites use windows ldap for ID, which can introduce spaces into names
 USERNAME=$(echo -n "${LOCAL_USER_NAME:-9001}" | tr "[:space:]" "_")
+# it is possible a user name already exists. If so, append a '1' - that won't exist
 if grep "^${USERNAME}:" /etc/passwd ; then
   USERNAME="${USERNAME}1"
 fi
 USER_ID="${LOCAL_USER_ID:-9001}"
+# Some sites use windows ldap for ID, which can introduce spaces into names
 GROUPNAME=$(echo -n "${LOCAL_GROUP_NAME:-9001}" | tr "[:space:]" "_")
 if grep "^${GROUPNAME}:" /etc/group ; then
   GROUPNAME="${GROUPNAME}1"
 fi
 GROUP_ID="${LOCAL_GROUP_ID:-9001}"
-echo "Starting A2KD With UID: $USERNAME:$USER_ID - $GROUPNAME:$GROUP_ID"
+echo "Creating User UID: $USERNAME:$USER_ID - $GROUPNAME:$GROUP_ID"
 groupadd --gid "${GROUP_ID}" "${GROUPNAME}" 2>/dev/null 
 useradd --shell /bin/bash -u $USER_ID -g ${GROUP_ID} -o -c "" -m "${USERNAME}"
 export HOME="/home/${USERNAME}"
 cd ${HOME}
 mkdir .ssh
-ssh-keygen -t rsa -f .ssh/id_rsa -N ''
+ssh-keygen -q -t rsa -f .ssh/id_rsa -N ''
 cp .ssh/id_rsa .ssh/authorized_keys
 chown -R "${USERNAME}" .ssh
-# run requested command (normally a2kd.sh)
-exec /usr/local/bin/gosu "${USERNAME}" $@
 
+# set up shared_top so that paths that use it will be valid:
+mkdir -p $(dirname "$shared_top")
+ln -s /sharedTop "$shared_top"
+
+# The HADOOP Configuration Directory is mounted at /hadoop. Set the variable.
+export HADOOP_CONF_DIR=/hadoop
+
+# set up environment for running as requesting user
+export PATH=${SPARK_HOME}/bin:${A2KD_HOME}/bin:${PATH}
+
+# make sure /scripts and /classes exist
+[ -d /classes ] || mkdir /classes && chmod a+rx /classes
+[ -d /scripts ] || mkdir /scripts && chmod a+rx /scripts
+
+# run any customization scripts we have installed
+run-parts /scripts
+
+# run requested command (normally a2kd.sh)
+echo "Starting A2KD With UID: $USERNAME:$USER_ID - $GROUPNAME:$GROUP_ID"
+exec /usr/local/bin/gosu "${USERNAME}" $@ >/tmp/cmd

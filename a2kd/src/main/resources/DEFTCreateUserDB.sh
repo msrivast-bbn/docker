@@ -43,12 +43,17 @@ if [ ! -r "$1" ] ; then
   exit 1
 fi 
 
-# check for wget and psql
+# check for wget, xmllint and psql
 hash wget 2>/dev/null || { echo >&2 "I require wget but it's not installed or in your PATH.  Aborting."; exit 1; }
 hash psql 2>/dev/null || { echo >&2 "I require psql but it's not installed or in your PATH.  Aborting."; exit 1; }
+hash xmllint 2>/dev/null || { echo >&2 "I require xmllint but it's not installed or in your PATH.  Aborting."; exit 1; }
 
-# read and parse the configuration file for the values of interest
-eval $(java -cp $(dirname $0)/../lib/\* adept.e2e.driver.E2eConfig $1)
+username=$(echo 'cat /config/kb_config/metadata_db/@username' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+password=$(echo 'cat /config/kb_config/metadata_db/@password' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+host=$(echo 'cat /config/kb_config/metadata_db/@host' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+dbName=$(echo 'cat /config/kb_config/metadata_db/@dbName' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+port=$(echo 'cat /config/kb_config/metadata_db/@port' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+url=$(echo 'cat /config/kb_config/triple_store/@url' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
 
 for param in host dbName username password port url; do
   eval value="\$$param"

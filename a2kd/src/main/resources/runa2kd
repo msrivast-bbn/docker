@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+
+echo runa2kd.sh
 #
 # Script run on the dockerd host to start the A2KD Container.
 
@@ -31,23 +33,32 @@ function help {
 cat <<EOF
 a2kd
 
-$1 <a2kd_config file> <input_directory> <num_partitions> <num_executors>
+$1 <output directory path> <num_partitions> <num_dedup_partitions> <a2kd_config file> <spark settings file> <shared_top>
 
 The $1 program executes an A2KD analysis over the provided corpus using the
 parameters specified on the command line and in the configuration file.
 
-This program requires access to the HADOOP and the Spark configuration
-directories in order to function properly. If the standard environment
-variables (HADOOP_CONF_DIR and SPARK_CONF_DIR) are not defined, the program
-wil look for them at /etc/{spark,hadoop}/conf and at $HOME/{hadoop,spark}/conf.
-If these directories cannot be found and the environment variables are not defined,
-the program will fail. If you have these directories in a non-standard location, the
+This program requires access to the HADOOP configuration
+directory and an optional Spark configuration file in order to function properly.
+
+If the standard environment variable HADOOP_CONF_DIR is not 
+defined, the program will look for the hadoop configuration directory at 
+$HOME/hadoop/conf, then /etc/hadoop/conf. If these directories cannot be found
+and the environment variable is not defined, the program will fail.
+
+ If you have this directory in a non-standard location, the
 environment variables can easily be defined on the command line:
 
-SPARK_CONF_DIR=/share/spark/conf HADOOP_CONF_DIR=/share/hadoop/conf $1 a2kd_config input 5 5
+HADOOP_CONF_DIR=/share/hadoop/conf $1 output 5 5 a2kd_config.xml spark.conf /nfs/gold-04/u40
 
 The parameters that must be defined in the configuration file are documented therein.
 
+The spark_config file contents are documented in 
+https://spark.apache.org/docs/2.1.0/configuration.html#loading-default-configurations.
+See the Spark Documentation for information on the parameters that can be specified.
+
+The path described by shared_top is the top-level directory of a directory tree 
+whose path is common to all nodes in the cluster.  
 EOF
 [ $# -eq 2 ] && exit $2
 }
@@ -55,6 +66,7 @@ EOF
 function errexit {
    ( >&2 echo "$1")
    logger -p user.error "$1"
+   rm -rf /tmp/input$$
    exit 1
 }
 
@@ -62,10 +74,13 @@ function errexit {
 if [ $# -eq 0 -o "$1" = "-h" -o "$1" = "--help" ]; then
   help $(basename $0) 0
 fi
-if [ $# -ne 4 ]; then
-  ( >&2 echo "ERROR: incorrect number of parameters")
+if [ $# -ne 6 ]; then
+  ( >&2 echo "\nERROR: incorrect number of parameters: $#")
   help $(basename $0) 1
 fi
+
+# check for xmllint
+hash xmllint 2>/dev/null || { echo >&2 "I require xmllint but it's not installed or in your PATH.  Aborting."; exit 1; }
 
 # Set up identity variables
 UI="$(id -u)"
@@ -73,40 +88,73 @@ UN="$(echo -n "$(id -un)" | tr "[:space:]" "_")"
 GI="$(id -g)"
 GN="$(echo -n "$(id -gn)" | tr "[:space:]" "_")"
 
-# $1 a2kd config file
-if [ ! -f "${1}" -o ! -r "${1}" ] ; then
-  errexit "ERROR: A2KD Configuration File \"${1}\" does not exist, is not a file, or is not readable"
-fi
+# Directory to assemble inputs and outputs in
+inputtop=/tmp/input$$
+mkdir $inputtop
 
-# read and parse the configuration file for the values of interest
-eval $(java -cp $(dirname $0)/../lib/\* adept.e2e.driver.E2eConfig "$1")
+# $1 output directory - create if not there
+if [ ! -e "${1}" ] ; then
+  mkdir -p "${1}"
+  chmod 755 "${1}"
+fi
+[ -d "${1}" -a -w "${1}" ] || errexit "ERROR: path \"$1\" is not a directory or is not writable"
+output_dir=$(readlink -f "${1}")
+ 
+[[ "$2" =~ ^[0-9]+$ ]] || errexit "ERROR: value \"$2\" specified for number of partitions is not an integer"
+num_partitions=$2 
+echo "$2" >/tmp/input$$/partitions
 
-# Check for or set SPARK_CONF_DIR
-if [ ! "${SPARK_CONF_DIR}" ] ; then
-  if [ "${SPARK_HOME}" ] ; then
-    if [ -d ${SPARK_HOME}/conf -a -r ${SPARK_HOME}/conf ] ; then
-      SPARK_CONF_DIR=${SPARK_HOME}/conf
-    fi
-  fi
-  for SCD in /etc/spark/conf ~/spark/conf /var/lib/spark/conf; do
-    if [ -d $SCD -a -r $SCD ]; then
-      SPARK_CONF_DIR="$SCD"
-      break
-    fi
-  done
+[[ "$3" =~ ^[0-9]+$ ]] || errexit "ERROR: value \"$3\" specified for number of deduplication partitions is not an integer"
+num_dd_partitions=$3
+echo "$3" >/tmp/input$$/ddPartitions
+
+# $4 a2kd config file
+if [ ! -f "${4}" -o ! -r "${4}" ] ; then
+  errexit "ERROR: A2KD Configuration File \"${4}\" does not exist, is not a file, or is not readable"
 fi
-if [ ! "${SPARK_CONF_DIR}" ] ; then
-  errexit "ERROR: SPARK_CONF_DIR is not defined and cannot be guessed"
+a2kd_config="$4"
+# copy a2kd config to input directory
+cp "$a2kd_config" /tmp/input$$/config.xml
+
+# $5 spark config file
+if [ ! -f "${5}" -o ! -r "${5}" ] ; then
+  errexit "ERROR: Spark Configuration File \"${5}\" does not exist, is not a file, or is not readable"
 fi
-if [ ! -e "${SPARK_CONF_DIR}" ] ; then
-  errexit "ERROR: SPARK_CONF_DIR does not exist"
-fi
-if [ ! -d "${SPARK_CONF_DIR}" ] ; then
-  errexit "ERROR: SPARK_CONF_DIR is not a directory"
-fi
-if [ ! -r "${SPARK_CONF_DIR}" ] ; then
-  errexit "ERROR: SPARK_CONF_DIR (${SPARK_CONF_DIR}) found but is not readable"
-fi
+spark_config="$5"
+# copy spark config to input directory
+cp "$spark_config" /tmp/input$$/spark.conf
+
+# $6 shared directory
+[ -e "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" does not exist"
+[ -d "${6}" ] || errexit "ERROR: Shared Directory path \"${6}\" is not a directory"
+[ -r "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" is not readable"
+[ -w "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" is not writable"
+[ -x "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" is not searchable"
+shared_top="$6"
+
+# Get the language(s) and their input directories so we can mount them in the Docker container
+dirs=$(echo 'cat /config/algorithm_set/input_directory/text()' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)")
+input_dirs=( $dirs )
+langs=$(echo 'cat /config/algorithm_set/@language' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -e 's/^[^\"]*\"//' -e 's/\"//g')
+languages=( $langs )
+echo $langs >/tmp/input$$/languages
+
+[ ${languages:-none} = none ] && errexit "ERROR: no input languages specified in the configuration file"
+[ ${input_dirs:-none} = none ] && errexit "ERROR: no input directory specified in the configuration file"
+rm -f /tmp/input$$/mounts
+cnt=0
+for dir in $dirs; do
+  [ -e "${dir}" ] ||  errexit "ERROR: input directory \"${dir}\" does not exist"
+  [ -d "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" exists but is not a directory"
+  [ -r "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" exists but is not readable"
+  # This is building VOLUME arguments for the docker run command below
+  printf -- '-v %s:/%s ' "$(readlink -f "$dir")" "${languages[$cnt]}" >>/tmp/input$$/mounts
+  cnt=$(( $cnt + 1 ))
+done
+
+# Get corpus_id to use as docker container name
+corpus_id=$(echo 'cat /config/kb_config/@corpus_id' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+
 # Check for or set HADOOP_CONF_DIR
 if [ ! "${HADOOP_CONF_DIR}" ] ; then
   if [ "${HADOOP_HOME}" ] ; then
@@ -121,6 +169,7 @@ if [ ! "${HADOOP_CONF_DIR}" ] ; then
     fi
   done
 fi
+
 if [ ! "${HADOOP_CONF_DIR}" ] ; then
   errexit "ERROR: HADOOP_CONF_DIR is not defined and cannot be guessed"
 fi
@@ -134,79 +183,37 @@ if [ ! -r "${HADOOP_CONF_DIR}" ] ; then
   errexit "ERROR: HADOOP_CONF_DIR (${HADOOP_CONF_DIR}) found but is not readable"
 fi
 
-IFS='%'
-a2kd_config="$(readlink -f $"${1}")"
-unset IFS
-echo $a2kd_config "$a2kd_config"
-# $2 input data directory
-if [ ! -d "${2}" -o ! -r "${2}" ] ; then
-  errexit "ERROR: A2KD Input Data Directory \"${2}\" does not exist, is not a directory, or is not readable"
-fi
-IFS='%'
-a2kd_input_dir="$(readlink -f $"${2}")" # also convert to an absolute path name
-unset IFS
-echo $a2kd_input_dir "$a2kd_input_dir"
-# $3 partitions
-if ! [[ "${3}" =~ ^[0-9]+$ ]] ; then
-  errexit "ERROR: number of partitions value \"${3}\" is not an integer value"
-fi
-a2kd_num_partitions="$3"
-# $4 executors
-if ! [[ "${4}" =~ ^[0-9]+$ ]] ; then
-  errexit "ERROR: number of executors value \"${4}\" is not an integer value"
-fi
-a2kd_num_executors="$4"
-
-[ "$shared_top" ] || errexit "ERROR: the \"shared_top\" variable is not defined in the \"$a2kd_config\" file"
-if [ ! -d "$shared_top" -o ! -r "$shared_top" ] ; then
-  errexit "ERROR: The A2KD Shared Directory \"$shared_top\" does not exist, is not a directory, or is not readable"
-fi
-
-a2kd_output_dir="$(readlink -f $"${PWD}")"
-
-if [ "$kb_report_output_dir" ]; then
-  if [[ $kb_report_output_dir != /* ]] ; then
-    kb_report_output_dir=$shared_top/$kb_report_output_dir
-  fi
-  mkdir -p $kb_report_output_dir/$corpus_id
-fi
-if [[ "$gather_statistics" == "true" ]]; then
-  if [ ! "$stats_file_path" ] ; then
-    errexit "ERROR: gather_statistics is set to true in ${a2kd_config}, but stats_file_path is not set"
-  fi
-  if [[ "$stats_file_path" != /* ]] ; then
-    stats_file_path=$shared_top/$stats_file_path
-  fi
-  if [ ! -e "$stats_file_path" ]; then
-    mkdir -p "$(dirname $stats_file_path)"
-    touch "$stats_file_path"
-  else
-    [ -f "$stats_file_path" ] || errexit "ERROR: the statistics file path $stats_file_path exists but is not a file"
-    [ -w "$stats_file_path" ] || errexit "ERROR: the statistics file path $stats_file_path exists but is not writable"
-  fi
-  chmod 777 "$stats_file_path"
-fi
-find "$kb_report_output_dir" -type d -exec chmod 777 {} \;
-
 # print the license
 printLicense
+echo
+echo starting Docker container
+echo
 # Next Phase - start the container and continue processing
+# /tmp/input$$ contains:
+#   /tmp/input$$/partitions - a file containing the number of partitions to use.
+#   /tmp/input$$/ddPartitions - a file containing the number of document deduplication partitions to use.
+#   /tmp/input$$/config.xml - a file containing the A2KD Configuration file.
+#   /tmp/input$$/spark.conf - a file containing the Spark properties file.
+#   /tmp/input$$/languages - a file containing a space-separated list of language codes
+# The docker container will have the following volumes:
+#   /input - mount to /tmp/input$$ containing the files listed above
+#   /output - mount to output directory
+#   /{EN|ZH|ES} - mounts to the directories containing input files - the name being a language code
+#   /hadoop - a mount to the HADOOP configuration directory
+#   /sharedTop - a mount to the shared_top directory
+#
 ${DOCKER_CMD:-docker} run -it --rm --name "$corpus_id" \
   -e LOCAL_USER_ID=$UI \
   -e LOCAL_USER_NAME="$UN" \
   -e LOCAL_GROUP_ID=$GI \
   -e LOCAL_GROUP_NAME="$GN" \
-  -e master=${master:-yarn} \
-  -e deploy_mode=${deploy_mode:-cluster} \
   -e shared_top="$shared_top" \
-  -e ext_classpath="$ext_classpath" \
-  -e a2kd_config="$a2kd_config" \
-  -v "$HADOOP_CONF_DIR":/conf/hadoop \
-  -v "$SPARK_CONF_DIR":/conf/spark \
-  -v "$shared_top":/sharedData \
-  -v "$a2kd_config":/a2kd_config \
-  -v "$a2kd_input_dir":/input \
-  -v "$a2kd_output_dir":/output \
+  -v /tmp/input$$:/input \
+  -v $shared_top:/sharedTop \
+  -v $output_dir:/output \
+  -v $HADOOP_CONF_DIR:/hadoop \
+  $(cat /tmp/input$$/mounts) \
   -p :4040 \
-  deft/a2kd a2kd.sh $2 $3 $4
-
+  deft/a2kd a2kd.sh
+# Processing complete, remove temporary input directory
+rm -rf /tmp/input$$

@@ -16,7 +16,7 @@ RUN apt-get update -y && \
     apt-get upgrade -y && \
     echo 'deb http://apt.postgresql.org/pub/repos/apt xenial-pgdg main' >/etc/apt/sources.list.d/postgresql.list && \
     echo "deb [arch=amd64] http://archive.cloudera.com/cdh${CDH_MAJOR}/ubuntu/xenial/amd64/cdh xenial-cdh${CDH_VERSION} contrib" >>/etc/apt/sources.list.d/cloudera.list && \
-    apt-get install -y apt-utils curl wget python perl libterm-readline-gnu-perl openjdk-8-jdk unzip ssh vim vim-fugitive emacs && \
+    apt-get install -y apt-utils curl wget python perl libterm-readline-gnu-perl openjdk-8-jdk unzip ssh vim vim-fugitive emacs xmlstarlet && \
     wget --quiet -O - https://archive.cloudera.com/cdh${CDH_MAJOR}/ubuntu/xenial/amd64/cdh/archive.key | apt-key add - && \
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
     chmod 644 /etc/apt/sources.list.d/*.list && \
@@ -37,6 +37,7 @@ RUN apt-get update -y && \
     mkdir -p ${A2KD_HOME}/bin && \
     mv /a2kd.sh ${A2KD_HOME}/bin/a2kd.sh && \
     cp ${A2KD_HOME}/*.txt / && \
+    mkdir /input && \
     chmod 755 ${A2KD_HOME} ${A2KD_HOME}/bin/* /scripts /scripts/*
 
 EXPOSE 4040
