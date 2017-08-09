@@ -83,7 +83,7 @@ fi
 hash xmllint 2>/dev/null || { echo >&2 "I require xmllint but it's not installed or in your PATH.  Aborting."; exit 1; }
 
 timestamp=$(date +%y%m%d%H%M%S)
-log "the UTC timestamp/id of this job is $timestamp"
+echo "The UTC timestamp/id of this job is $timestamp"
 
 # Set up identity variables
 UI="$(id -u)"
