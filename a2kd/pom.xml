@@ -127,7 +127,7 @@
             </configuration>
           </execution>
           <execution>
-            <id>extract-a2kd_config.template.xml</id>
+            <id>extract_config_templates</id>
             <goals>
               <goal>unpack</goal>
             </goals>
@@ -139,7 +139,7 @@
                   <version>${project.version}</version>
                   <type>jar</type>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                  <includes>/e2e_config.template.xml</includes>
+                  <includes>/e2e_config.template.xml,kbresolver_properties.template.xml</includes>
                 </artifactItem>
               </artifactItems>
             </configuration>
