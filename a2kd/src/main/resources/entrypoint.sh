@@ -62,7 +62,7 @@ export PATH=${SPARK_HOME}/bin:${A2KD_HOME}/bin:${PATH}
 run-parts /scripts
 
 # run requested command (normally a2kd.sh)
-if [ "${0:-x}" == a2kd.sh ]; then
+if [ "${1:-x}" == a2kd.sh ]; then
   echo "Starting A2KD With UID: $USERNAME:$USER_ID - $GROUPNAME:$GROUP_ID"
   exec /usr/local/bin/gosu "${USERNAME}" $@ >/tmp/cmd
 else
