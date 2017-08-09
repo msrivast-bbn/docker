@@ -19,7 +19,7 @@
 #    shared_top - the path to the shared directory on the 'outside', we will recreate that in the container
 #
 
-echo In entrypoint.sh
+echo In entrypoint.sh $timestamp
 
 # Some sites use windows ldap for ID, which can introduce spaces into names
 USERNAME=$(echo -n "${LOCAL_USER_NAME:-9001}" | tr "[:space:]" "_")
@@ -45,8 +45,8 @@ cp .ssh/id_rsa .ssh/authorized_keys
 chown -R "${USERNAME}" .ssh
 
 # set up shared_top so that paths that use it will be valid:
-mkdir -p $(dirname "$shared_top")
-ln -s /sharedTop "$shared_top"
+[ ${shared_top:-o#} = 'o#' ] || mkdir -p $(dirname "$shared_top")
+[ -d /sharedTop -a "$shared_top:-o#}" != 'o#' ] && ln -s /sharedTop "$shared_top"
 
 # The HADOOP Configuration Directory is mounted at /hadoop. Set the variable.
 export HADOOP_CONF_DIR=/hadoop
@@ -62,5 +62,9 @@ export PATH=${SPARK_HOME}/bin:${A2KD_HOME}/bin:${PATH}
 run-parts /scripts
 
 # run requested command (normally a2kd.sh)
-echo "Starting A2KD With UID: $USERNAME:$USER_ID - $GROUPNAME:$GROUP_ID"
-exec /usr/local/bin/gosu "${USERNAME}" $@ >/tmp/cmd
+if [ "${0:-x}" == a2kd.sh ]; then
+  echo "Starting A2KD With UID: $USERNAME:$USER_ID - $GROUPNAME:$GROUP_ID"
+  exec /usr/local/bin/gosu "${USERNAME}" $@ >/tmp/cmd
+else
+  exec /bin/bash
+fi

@@ -82,6 +82,9 @@ fi
 # check for xmllint
 hash xmllint 2>/dev/null || { echo >&2 "I require xmllint but it's not installed or in your PATH.  Aborting."; exit 1; }
 
+timestamp=$(date +%y%m%d%H%M%S)
+log "the UTC timestamp/id of this job is $timestamp"
+
 # Set up identity variables
 UI="$(id -u)"
 UN="$(echo -n "$(id -un)" | tr "[:space:]" "_")"
@@ -208,6 +211,7 @@ ${DOCKER_CMD:-docker} run -it --rm --name "$corpus_id" \
   -e LOCAL_GROUP_ID=$GI \
   -e LOCAL_GROUP_NAME="$GN" \
   -e shared_top="$shared_top" \
+  -e timestamp="$timestamp" \
   -v /tmp/input$$:/input \
   -v $shared_top:/sharedTop \
   -v $output_dir:/output \

@@ -24,7 +24,7 @@
 set -eu
 set -o pipefail
 
-echo Starting A2KD.sh - running as $(id)
+echo Starting A2KD.sh $timestamp - running as $(id)
 trap '
 	exit_status=$?; \
 	exit_command="${BASH_COMMAND}"; \
@@ -49,13 +49,10 @@ fi
 num_partitions=$(cat /input/partitions)
 num_ddPartitions=$(cat /input/ddPartitions)
 
-timestamp=$(date +%s)
-log "the UTC timestamp/id of this script execution is $timestamp"
-
 log "a2kd preparation started"
-config_shared_directory="${shared_top%/}/$(id -un)"
-mkdir -p "$config_shared_directory"
-config_shared="${config_shared_directory}/config_${timestamp}.xml"
+shared_directory="${shared_top%/}/$(id -un)"
+mkdir -p "$shared_directory"
+config_shared="${shared_directory}/config_${timestamp}.xml"
 rm -f "$config_shared"
 
 log "creating KB schema"
@@ -65,6 +62,7 @@ host=$(xmlstarlet sel -T -t -m "/config/kb_config/metadata_db/@host" -v . -n /in
 username=$(xmlstarlet sel -T -t -m "/config/kb_config/metadata_db/@username" -v . -n /input/config.xml)
 dbName=$(xmlstarlet sel -T -t -m "/config/kb_config/metadata_db/@dbName" -v . -n /input/config.xml)
 password=$(xmlstarlet sel -T -t -m "/config/kb_config/metadata_db/@password" -v . -n /input/config.xml)
+corpus_id=$(xmlstarlet sel -T -t -m "/config/kb_config/@corpus_id" -v . -n /input/config.xml)
 
 # use them to ensure the schema has been created
 cat "$A2KD_HOME/etc/DEFT KB create schema.txt" \
@@ -75,20 +73,20 @@ input_dir_hdfs="input_${timestamp}"
 log "uploading local input directory/ies to hdfs"
 languages=$(cat /input/languages)
 cp /input/config.xml /tmp
+chmod 664 /tmp/config.xml
+
 # copy in the input data, and then update the config file to the new location in hdfs for each language
 hdfs dfs -mkdir "$input_dir_hdfs"
 for lang in $languages; do
-  hdfs dfs -mkdir "$input_dir_hdfs/${lang}"
-  hdfs dfs -put "/${lang}" "$input_dir_hdfs/${lang}"
+  hdfs dfs -put "/${lang}" "$input_dir_hdfs"
   # update path in shared copy of a2kd_config file
-  xmlstarlet ed -u "/config/algorithm_set[@language="$lang"]/input_directory" -v "${input_dir_hdfs}/${lang}" /tmp/config.xml >/tmp/a
-  rm -f /tmp/config.xml
-  mv /tmp/a /tmp/config.xml
+  xmlstarlet edit --inplace --update "/config/algorithm_set[@language='$lang']/input_directory" --value "${input_dir_hdfs}/${lang}" /tmp/config.xml
 done
 # we are done editing the config file, move it to the shared location
 mv /tmp/config.xml "$config_shared"
 
 output_dir_hdfs="output_${timestamp}"
+hdfs dfs -mkdir "$output_dir_hdfs"
 spark_eventLog_dir_hdfs="hdfs:///user/$(id -un)/spark_logs/spark_logs_${timestamp}"
 hdfs dfs -mkdir "$spark_eventLog_dir_hdfs"
 
@@ -102,10 +100,12 @@ ${SPARK_HOME}/bin/spark-submit \
 log "downloading output directory from hdfs"
 hdfs dfs -get "${output_dir_hdfs}" /output
 
-log "removing temporary hdfs directories, a2kd configuration file"
+log "removing temporary hdfs directories, saving configuration files"
 hdfs dfs -rm -r -skipTrash "${input_dir_hdfs}" "${output_dir_hdfs}"
-rm -f "$config_shared"
-
+mv "$config_shared" "/output/${output_dir_hdfs}/config_shared.xml"
+cp /input/config.xml "/output/${output_dir_hdfs}/config.xml"
+cp /input/spark.conf "/output/${output_dir_hdfs}/spark.conf"
+echo $corpus_id >"/output/${output_dir_hdfs}/corpus_id"
 log "spark.eventLog.dir: ${spark_eventLog_dir_hdfs}"
 log "wrote output to local directory"
 

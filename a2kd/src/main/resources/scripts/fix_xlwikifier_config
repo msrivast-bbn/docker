@@ -1,7 +1,7 @@
 #!/bin/bash
-# Run as root by run-parts by /entrypoint before a2kd is executed
+# Run as root by run-parts by /entrypoint.sh before a2kd is executed
 # temporary script to fix up the Illinois XlWikifier Multilanguage configuration file
-set -xv
+
 dirs=$(grep -F spark.executor.extraClassPath /input/spark.conf | cut -f 2 | tr ':' ' ')
 for dir in $dirs; do
   [ -e "$dir/xlwikifier-demo.config" ] && xlwcf="$dir/xlwikifier-demo.config" && break;
@@ -23,5 +23,5 @@ if [ ! -d "${dir}/illinois-wikifier-models" ]; then
 fi
 
 sed -i "s!\$ext_classpath/!${dir}/!g" ${xlwcf}
-sed -i "s!/nfs/mercury-04/u40/e2e_artifacts/!${dir}/!" ${xlwcf}
+sed -i "s!/nfs/mercury-04/u40/e2e_artifacts/!${dir}/!" ${xlwcf} # just in case
 exit 0
