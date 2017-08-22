@@ -185,12 +185,17 @@ fi
 if [ ! -r "${HADOOP_CONF_DIR}" ] ; then
   errexit "ERROR: HADOOP_CONF_DIR (${HADOOP_CONF_DIR}) found but is not readable"
 fi
-
+myPort=4040
+while $(netstat -tln | grep -qF ":$myPort ") ; do
+  myPort=$(( myPort + 1 ))
+done
 # print the license
 printLicense
 echo
 echo starting Docker container
 echo
+echo "Making port $myPort available for Spark UI"
+
 # Next Phase - start the container and continue processing
 # /tmp/input$$ contains:
 #   /tmp/input$$/partitions - a file containing the number of partitions to use.
@@ -217,7 +222,7 @@ ${DOCKER_CMD:-docker} run -it --rm --name "$corpus_id" \
   -v $output_dir:/output \
   -v $HADOOP_CONF_DIR:/hadoop \
   $(cat /tmp/input$$/mounts) \
-  -p :4040 \
+  -p $myPort:4040 \
   deft/a2kd a2kd.sh
 # Processing complete, remove temporary input directory
 rm -rf /tmp/input$$
