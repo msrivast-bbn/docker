@@ -42,7 +42,7 @@ if [ ! -r "$1" ] ; then
   echo "ERROR: $1 is not readable"
   exit 1
 fi 
-
+a2kd_config="$1"
 # check for wget, xmllint and psql
 hash wget 2>/dev/null || { echo >&2 "I require wget but it's not installed or in your PATH.  Aborting."; exit 1; }
 hash psql 2>/dev/null || { echo >&2 "I require psql but it's not installed or in your PATH.  Aborting."; exit 1; }
@@ -71,7 +71,7 @@ done
 echo
 echo
 read -e -p "Enter DB Administrator login: " presadmin
-read -e -p "Enter DB Administrator password: " presadminpw
+read -s -e -p "Enter DB Administrator password: " presadminpw
 echo
 umask 077
 export PGPASSFILE=~/.pgpass$$

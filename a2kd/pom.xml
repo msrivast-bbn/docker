@@ -13,6 +13,7 @@
   <description>A Docker image of the Adept E2E system</description>
   <properties>
     <maven.build.timestamp.format>yyMMdd-HHmmss-SSSS</maven.build.timestamp.format>
+    <timestamp>${maven.build.timestamp}</timestamp>
   </properties>
   <dependencies>
     <dependency>
@@ -152,7 +153,7 @@
         <configuration>
           <images>
             <image>
-              <name>deft/${project.artifactId}:${maven.build.timestamp}</name>
+              <name>deft/${project.artifactId}:${timestamp}</name>
               <build>
                 <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
                 <tags>
@@ -162,8 +163,8 @@
             </image>
           </images>
           <verbose>true</verbose>
-          <saveFile>${project.build.directory}/deft_${project.artifactId}.tar.xz</saveFile>
-          <saveName>deft/${project.artifactId}:${maven.build.timestamp}</saveName>
+          <saveFile>${project.build.directory}/deft_${project.artifactId}.${timestamp}.tar.xz</saveFile>
+          <saveName>deft/${project.artifactId}:${timestamp}</saveName>
         </configuration>
         <executions>
           <execution>

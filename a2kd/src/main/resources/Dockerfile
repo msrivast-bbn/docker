@@ -25,6 +25,7 @@ RUN apt-get update -y && \
     apt-get install -y hadoop hadoop-0.20-mapreduce hadoop-client hadoop-hdfs hadoop-mapreduce hadoop-yarn \
     postgresql-9.6 postgresql-contrib-9.6 postgresql-plpython-9.6 && \
     umask 022 && \
+    ln -s libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcrypto.so && \
     mv /gosu-amd64 /usr/local/bin/gosu && \
     chmod 755 /usr/local/bin/gosu /entrypoint.sh && \
     tar -C /var/lib -xzf /${SPARK_TGZ} && \

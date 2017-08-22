@@ -147,9 +147,9 @@ echo $langs >/tmp/input$$/languages
 rm -f /tmp/input$$/mounts
 cnt=0
 for dir in $dirs; do
-  [ -e "${dir}" ] ||  errexit "ERROR: input directory \"${dir}\" does not exist"
-  [ -d "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" exists but is not a directory"
-  [ -r "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" exists but is not readable"
+  [ -e "${dir}" ] ||  errexit "ERROR: input directory \"${dir}\" for language \"${languages[$cnt]}\" does not exist"
+  [ -d "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" exists but is not a directory"
+  [ -r "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" exists but is not readable"
   # This is building VOLUME arguments for the docker run command below
   printf -- '-v %s:/%s ' "$(readlink -f "$dir")" "${languages[$cnt]}" >>/tmp/input$$/mounts
   cnt=$(( $cnt + 1 ))

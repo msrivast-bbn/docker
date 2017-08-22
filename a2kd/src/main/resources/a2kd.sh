@@ -87,8 +87,6 @@ mv /tmp/config.xml "$config_shared"
 
 output_dir_hdfs="output_${timestamp}"
 hdfs dfs -mkdir "$output_dir_hdfs"
-spark_eventLog_dir_hdfs="hdfs:///user/$(id -un)/spark_logs/spark_logs_${timestamp}"
-hdfs dfs -mkdir "$spark_eventLog_dir_hdfs"
 
 log "running spark-submit"
 
@@ -99,14 +97,12 @@ ${SPARK_HOME}/bin/spark-submit \
 
 log "downloading output directory from hdfs"
 hdfs dfs -get "${output_dir_hdfs}" /output
-
 log "removing temporary hdfs directories, saving configuration files"
 hdfs dfs -rm -r -skipTrash "${input_dir_hdfs}" "${output_dir_hdfs}"
 mv "$config_shared" "/output/${output_dir_hdfs}/config_shared.xml"
 cp /input/config.xml "/output/${output_dir_hdfs}/config.xml"
 cp /input/spark.conf "/output/${output_dir_hdfs}/spark.conf"
 echo $corpus_id >"/output/${output_dir_hdfs}/corpus_id"
-log "spark.eventLog.dir: ${spark_eventLog_dir_hdfs}"
 log "wrote output to local directory"
 
 log "A2KD Processing Complete"
