@@ -2,7 +2,11 @@
 # Run as root by run-parts by /entrypoint.sh before a2kd is executed
 # temporary script to fix up the Illinois XlWikifier Multilanguage configuration file
 
-dirs=$(grep -F spark.executor.extraClassPath /input/spark.conf | cut -f 2 | tr ':' ' ')
+dirs=$(awk '/spark.executor.extraClassPath/ {print $2}' /input/spark.conf | tr ':' ' ')
+if [ ! "$dirs" ]; then
+  echo "${0}: spark.executor.extraClassPath definition not found in spark configuration"
+  exit 0
+fi
 for dir in $dirs; do
   [ -e "$dir/xlwikifier-demo.config" ] && xlwcf="$dir/xlwikifier-demo.config" && break;
 done

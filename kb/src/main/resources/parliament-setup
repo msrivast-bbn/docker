@@ -1,0 +1,6 @@
+mkdir -p /var/lib/data/parliament/data
+mkdir -p /var/lib/data/parliament/log
+chown -R parliament: /var/lib/data/parliament
+chmod -R 775 /var/lib/data/parliament
+
+

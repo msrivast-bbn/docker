@@ -2,4 +2,7 @@
 if [ ! -f "/var/lib/data/pgsql/data/PG_VERSION" ]; then
     /postgresql-setup
 fi
+if [ ! -d "/var/lib/data/parliament/data/" ]; then
+    /parliament-setup
+fi
 scl enable python27 'supervisord -n -c /supervisord.conf'

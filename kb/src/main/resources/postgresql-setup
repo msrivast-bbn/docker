@@ -38,17 +38,20 @@ file_env() {
 }
 
 perform_initdb(){
+    if [ ! -e "$PGTOP" ]; then
+        mkdir -p "$PGTOP"
+        chown postgres: "$PGTOP"
+        chmod 775 "$PGTOP"
+    fi
     if [ ! -e "$PGDATA" ]; then
-        mkdir -p "$PGDATA" || return 1
-        chown postgres:postgres "$PGDATA"
-        chmod 700 "$PGDATA"
+        sudo -u postgres -g postgres mkdir -p "$PGDATA" || return 1
+        sudo -u postgres -g postgres chmod 775 "$PGDATA"
     fi
 
     # Create the initdb log file if needed
     if [ ! -e "$PGLOG" -a ! -h "$PGLOG" ]; then
-        touch "$PGLOG" || return 1
-        chown postgres:postgres "$PGLOG"
-        chmod 644 "$PGLOG"
+        sudo -u postgres -g postgres touch "$PGLOG" || return 1
+        sudo -u postgres -g postgres chmod 644 "$PGLOG"
     fi
 
     if [ ! -e "/run/postgresql" ]; then
@@ -59,9 +62,8 @@ perform_initdb(){
 
     # Create directory for postmaster log files
     if [ ! -e "$PGLOG" -a ! -h "$PGLOG" ]; then
-        mkdir -p "$PGDATA/pg_log"
-        chown postgres:postgres "$PGDATA/pg_log"
-        chmod 700 "$PGDATA/pg_log"
+        sudo -u postgres -g postgres mkdir -p "$PGDATA/pg_log"
+        sudo -u postgres -g postgres chmod 774 "$PGDATA/pg_log"
     fi
 
     # Initialize the database
