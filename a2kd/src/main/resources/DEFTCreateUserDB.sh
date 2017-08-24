@@ -178,9 +178,11 @@ if databaseExists "$dbName" "$host" "$port" ; then
       # OK, ask
       echo "The database $dbName on $host:$port already exists and is populated with data"
       read -p 'Do you want to overwrite it? (y/N): ' ans
-      if [ ${${ans:0:1},,} = y ] ; then
+      ans=${ans:0:1}
+      if [ ${ans,,} = y ] ; then
         read -p 'Are you sure? (y/N): ' ans
-        if [ ${${ans:0:1},,} = y ] ; then
+        ans=${ans:0:1}
+        if [ ${ans,,} = y ] ; then
           # remove existing
           deleteDatabase "$dbName" "$host" "$port"
           clearTripleStore "$url"

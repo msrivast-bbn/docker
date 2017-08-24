@@ -1,9 +1,9 @@
 #!/bin/bash
-# /input is mounted from /input and contains:
+# /input contains:
 #   /input/partitions - a file containing the number of partitions to use.
 #   /input/ddPartitions - a file containing the number of document deduplication partitions to use.
-#   /input/config.xml - a file containing the A2KD Configuration file.
-#   /input/spark.conf - a file containing the Spark properties file.
+#   /input/config.xml - a file containing the A2KD Configuration.
+#   /input/spark.conf - a file containing the Spark properties.
 #   /input/languages - a file containing a space-separated list of language codes
 # The docker container will have the following volumes:
 #   /input - mount to /tmp/input$$ containing the files listed above
@@ -17,9 +17,10 @@
 #    LOCAL_GROUP_ID -  The numeric id of the current group of the user that invoked runa2kd
 #    LOCAL_GROUP_NAME - The name of the current group of the user that invoked runa2kd
 #    shared_top - the path to the shared directory on the 'outside', we will recreate that in the container
-#
+#    job_timestamp - a (hopefully) unique time-based string
+#    job_directory - the path to the job directory - will be under shared_top
 
-echo In entrypoint.sh $timestamp
+echo In entrypoint.sh $job_timestamp
 
 # Some sites use windows ldap for ID, which can introduce spaces into names
 USERNAME=$(echo -n "${LOCAL_USER_NAME:-9001}" | tr "[:space:]" "_")
@@ -43,6 +44,7 @@ mkdir .ssh
 ssh-keygen -q -t rsa -f .ssh/id_rsa -N ''
 cp .ssh/id_rsa .ssh/authorized_keys
 chown -R "${USERNAME}" .ssh
+chmod 755 .ssh
 
 # set up shared_top so that paths that use it will be valid:
 [ ${shared_top:-o#} = 'o#' ] || mkdir -p $(dirname "$shared_top")
@@ -54,8 +56,7 @@ export HADOOP_CONF_DIR=/hadoop
 # set up environment for running as requesting user
 export PATH=${SPARK_HOME}/bin:${A2KD_HOME}/bin:${PATH}
 
-# make sure /scripts and /classes exist
-[ -d /classes ] || mkdir /classes && chmod a+rx /classes
+# make sure /scripts exist
 [ -d /scripts ] || mkdir /scripts && chmod a+rx /scripts
 
 # run any customization scripts we have installed

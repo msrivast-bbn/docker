@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
-
-echo runa2kd.sh
+umask 002
 #
 # Script run on the dockerd host to start the A2KD Container.
 
@@ -39,7 +38,7 @@ The $1 program executes an A2KD analysis over the provided corpus using the
 parameters specified on the command line and in the configuration file.
 
 This program requires access to the HADOOP configuration
-directory and an optional Spark configuration file in order to function properly.
+directory in order to function properly.
 
 If the standard environment variable HADOOP_CONF_DIR is not 
 defined, the program will look for the hadoop configuration directory at 
@@ -82,8 +81,8 @@ fi
 # check for xmllint
 hash xmllint 2>/dev/null || { echo >&2 "I require xmllint but it's not installed or in your PATH.  Aborting."; exit 1; }
 
-timestamp=$(date +%y%m%d%H%M%S)
-echo "The UTC timestamp/id of this job is $timestamp"
+job_timestamp=$(date +%y%m%d%H%M%S)
+echo "The UTC job_timestamp/id of this job is $job_timestamp"
 
 # Set up identity variables
 UI="$(id -u)"
@@ -91,100 +90,102 @@ UN="$(echo -n "$(id -un)" | tr "[:space:]" "_")"
 GI="$(id -g)"
 GN="$(echo -n "$(id -gn)" | tr "[:space:]" "_")"
 
-# Directory to assemble inputs and outputs in
-inputtop=/tmp/input$$
-mkdir $inputtop
-
 # $1 output directory - create if not there
 if [ ! -e "${1}" ] ; then
   mkdir -p "${1}"
-  chmod 755 "${1}"
+  chmod 775 "${1}"
 fi
 [ -d "${1}" -a -w "${1}" ] || errexit "ERROR: path \"$1\" is not a directory or is not writable"
 output_dir=$(readlink -f "${1}")
  
 [[ "$2" =~ ^[0-9]+$ ]] || errexit "ERROR: value \"$2\" specified for number of partitions is not an integer"
 num_partitions=$2 
-echo "$2" >/tmp/input$$/partitions
 
 [[ "$3" =~ ^[0-9]+$ ]] || errexit "ERROR: value \"$3\" specified for number of deduplication partitions is not an integer"
 num_dd_partitions=$3
-echo "$3" >/tmp/input$$/ddPartitions
 
 # $4 a2kd config file
 if [ ! -f "${4}" -o ! -r "${4}" ] ; then
   errexit "ERROR: A2KD Configuration File \"${4}\" does not exist, is not a file, or is not readable"
 fi
 a2kd_config="$4"
-# copy a2kd config to input directory
-cp "$a2kd_config" /tmp/input$$/config.xml
 
 # $5 spark config file
 if [ ! -f "${5}" -o ! -r "${5}" ] ; then
   errexit "ERROR: Spark Configuration File \"${5}\" does not exist, is not a file, or is not readable"
 fi
 spark_config="$5"
-# copy spark config to input directory
-cp "$spark_config" /tmp/input$$/spark.conf
 
 # $6 shared directory
 [ -e "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" does not exist"
 [ -d "${6}" ] || errexit "ERROR: Shared Directory path \"${6}\" is not a directory"
 [ -r "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" is not readable"
-[ -w "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" is not writable"
 [ -x "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" is not searchable"
 shared_top="$6"
+# create per-user shared directory if needed
+shared_directory="${6}/$(id -un)"
+if [ ! -d "$shared_directory" ]; then
+  mkdir -p "$shared_directory" || errexit "ERROR: Could not create User Shared Directory $shared_directory"
+fi
+# Now create the job directory under that
+job_directory="${shared_directory}/job_${job_timestamp}"
+[ -e "$job_directory" ] && errexit "ERROR: Job Directory $job_directory already exists!"
+mkdir -p "$job_directory" || errexit "ERROR: Could not create Job Directory $job_directory"
+
+# populate the job directory with our input info
+echo "$num_partitions" >"${job_directory}/partitions"
+echo "$num_dd_partitions" >"${job_directory}/ddPartitions"
+echo "$job_directory" >"${job_directory}/job_directory"
+echo "$job_timestamp" >"${job_directory}/job_timestamp"
+cp "$a2kd_config" "${job_directory}/config.xml"
+cp "$spark_config" "${job_directory}/spark.conf"
 
 # Get the language(s) and their input directories so we can mount them in the Docker container
 dirs=$(echo 'cat /config/algorithm_set/input_directory/text()' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)")
 input_dirs=( $dirs )
 langs=$(echo 'cat /config/algorithm_set/@language' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -e 's/^[^\"]*\"//' -e 's/\"//g')
 languages=( $langs )
-echo $langs >/tmp/input$$/languages
+echo $langs >"${job_directory}/languages"
 
 [ ${languages:-none} = none ] && errexit "ERROR: no input languages specified in the configuration file"
 [ ${input_dirs:-none} = none ] && errexit "ERROR: no input directory specified in the configuration file"
-rm -f /tmp/input$$/mounts
+rm -f "${job_directory}/mounts"
 cnt=0
 for dir in $dirs; do
   [ -e "${dir}" ] ||  errexit "ERROR: input directory \"${dir}\" for language \"${languages[$cnt]}\" does not exist"
   [ -d "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" exists but is not a directory"
   [ -r "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" exists but is not readable"
   # This is building VOLUME arguments for the docker run command below
-  printf -- '-v %s:/%s ' "$(readlink -f "$dir")" "${languages[$cnt]}" >>/tmp/input$$/mounts
+  printf -- '-v %s:/%s ' "$(readlink -f "$dir")" "${languages[$cnt]}" >>"${job_directory}/mounts"
   cnt=$(( $cnt + 1 ))
 done
+
+chmod ug=rw,o=r ${job_directory}/*
 
 # Get corpus_id to use as docker container name
 corpus_id=$(echo 'cat /config/kb_config/@corpus_id' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
 
 # Check for or set HADOOP_CONF_DIR
-if [ ! "${HADOOP_CONF_DIR}" ] ; then
-  if [ "${HADOOP_HOME}" ] ; then
-    if [ -d "$HADOOP_HOME/conf" -a -r "$HADOOP_HOME/conf" ] ; then
-      HADOOP_CONF_DIR="$HADOOP_HOME/conf"
-    fi
-  fi
+if [ ! "$HADOOP_CONF_DIR" ] ; then
   for HCD in /etc/hadoop/conf ~/hadoop/conf /var/lib/hadoop/conf; do
-    if [ -d $SCD -a -r $SCD ]; then
-      HADOOP_CONF_DIR="$SCD"
+    if [ -d $HCD -a -r $HCD ]; then
+      HADOOP_CONF_DIR="$HCD"
       break
     fi
   done
+  if [ x"$HADOOP_CONF_DIR" = x -a x"$HADOOP_HOME" != x ] ; then
+    if [ -d "$HADOOP_HOME/conf" -a -r "$HADOOP_HOME/conf" -a -x "$HADOOP_HOME/conf"] ; then
+      HADOOP_CONF_DIR="$HADOOP_HOME/conf"
+    fi
+  fi
 fi
 
-if [ ! "${HADOOP_CONF_DIR}" ] ; then
-  errexit "ERROR: HADOOP_CONF_DIR is not defined and cannot be guessed"
-fi
-if [ ! -e "${HADOOP_CONF_DIR}" ] ; then
-  errexit "ERROR: HADOOP_CONF_DIR does not exist"
-fi
-if [ ! -d "${HADOOP_CONF_DIR}" ] ; then
-  errexit "ERROR: HADOOP_CONF_DIR is not a directory"
-fi
-if [ ! -r "${HADOOP_CONF_DIR}" ] ; then
-  errexit "ERROR: HADOOP_CONF_DIR (${HADOOP_CONF_DIR}) found but is not readable"
-fi
+[ "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR is not defined and cannot be guessed"
+[ -e "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR $HADOOP_CONF_DIR does not exist"
+[ -d "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR $HADOOP_CONF_DIR is not a directory"
+[ -r "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR $HADOOP_CONF_DIR found but is not readable"
+[ -x "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR $HADOOP_CONF_DIR found but is not searchable"
+
 myPort=4040
 while $(netstat -tln | grep -qF ":$myPort ") ; do
   myPort=$(( myPort + 1 ))
@@ -192,37 +193,34 @@ done
 # print the license
 printLicense
 echo
-echo starting Docker container
-echo
-echo "Making port $myPort available for Spark UI"
+echo starting Docker container with port $myPort exposed
 
 # Next Phase - start the container and continue processing
-# /tmp/input$$ contains:
-#   /tmp/input$$/partitions - a file containing the number of partitions to use.
-#   /tmp/input$$/ddPartitions - a file containing the number of document deduplication partitions to use.
-#   /tmp/input$$/config.xml - a file containing the A2KD Configuration file.
-#   /tmp/input$$/spark.conf - a file containing the Spark properties file.
-#   /tmp/input$$/languages - a file containing a space-separated list of language codes
+# job_directory contains:
+#   $job_directory/partitions   - a file containing the number of partitions to use.
+#   $job_directory/ddPartitions - a file containing the number of document deduplication partitions to use.
+#   $job_directory/config.xml   - a file containing the A2KD Configuration file.
+#   $job_directory/spark.conf   - a file containing the Spark properties file.
+#   $job_directory/languages    - a file containing a space-separated list of language codes
 # The docker container will have the following volumes:
-#   /input - mount to /tmp/input$$ containing the files listed above
+#   /input - mount to $job_directory containing the files listed above
 #   /output - mount to output directory
 #   /{EN|ZH|ES} - mounts to the directories containing input files - the name being a language code
 #   /hadoop - a mount to the HADOOP configuration directory
 #   /sharedTop - a mount to the shared_top directory
 #
-${DOCKER_CMD:-docker} run -it --rm --name "$corpus_id" \
+${DOCKER_CMD:-docker} run -it --rm --name "$UN-$corpus_id" \
   -e LOCAL_USER_ID=$UI \
   -e LOCAL_USER_NAME="$UN" \
   -e LOCAL_GROUP_ID=$GI \
   -e LOCAL_GROUP_NAME="$GN" \
   -e shared_top="$shared_top" \
-  -e timestamp="$timestamp" \
-  -v /tmp/input$$:/input \
+  -e job_timestamp="$job_timestamp" \
+  -e job_directory="$job_directory" \
+  -v $job_directory:/input \
   -v $shared_top:/sharedTop \
   -v $output_dir:/output \
   -v $HADOOP_CONF_DIR:/hadoop \
-  $(cat /tmp/input$$/mounts) \
+  $(cat ${job_directory}/mounts) \
   -p $myPort:4040 \
   deft/a2kd a2kd.sh
-# Processing complete, remove temporary input directory
-rm -rf /tmp/input$$
