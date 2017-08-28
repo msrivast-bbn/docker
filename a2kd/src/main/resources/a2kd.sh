@@ -157,12 +157,14 @@ if [ "${CLASSPATH_TOP:-x}" != x ]; then
 fi
 
 # set files up if log4j.properties is present
-grep -F log4j.properties /input/spark.conf 2>&1 1>/dev/null
-if [ $? -ne 0 -a -f "${job_directory}/log4j.properties ]; then
-  cat >>/input/spark.conf <<EOF
+if grep -F log4j.properties /input/spark.conf 2>&1 1>/dev/null ; then
+  if [ -f "${job_directory}/log4j.properties ]; then
+    cat >>/input/spark.conf <<EOF
 spark.executor.extraJavaOptions -Dlog4j.configuration="${job_directory}/log4j.properties"
 spark.driver.extraJavaOptions   -Dlog4j.configuration="${job_directory}/log4j.properties"
 EOF
+  fi
+fi
 
 log "running spark-submit"
 
