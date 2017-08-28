@@ -162,6 +162,8 @@ done
 
 chmod ug=rw,o=r ${job_directory}/*
 
+[ -f log4j.properties ] && cp log4j.properties ${job_directory}
+
 # Get corpus_id to use as docker container name
 corpus_id=$(echo 'cat /config/kb_config/@corpus_id' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
 

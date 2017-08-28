@@ -6,6 +6,7 @@
 #   /input/config.xml - a file containing the A2KD Configuration file.
 #   /input/spark.conf - a file containing the Spark properties file.
 #   /input/languages - a file containing a space-separated list of language codes
+#   /input/log4j.properties [optional] - log4j logging parameters
 # The docker container will have the following volumes:
 #   /input - mount to /tmp/input$$ containing the files listed above
 #   /output - mount to output directory
@@ -154,6 +155,15 @@ if [ "${CLASSPATH_TOP:-x}" != x ]; then
     echo "spark.executor.extraClassPath	${first}:${SCP}" >> /input/spark.conf
   fi
 fi
+
+# set files up if log4j.properties is present
+grep -F log4j.properties /input/spark.conf 2>&1 1>/dev/null
+if [ $? -ne 0 -a -f "${job_directory}/log4j.properties ]; then
+  cat >>/input/spark.conf <<EOF
+spark.executor.extraJavaOptions -Dlog4j.configuration="${job_directory}/log4j.properties"
+spark.driver.extraJavaOptions   -Dlog4j.configuration="${job_directory}/log4j.properties"
+EOF
+
 log "running spark-submit"
 
 ${SPARK_HOME}/bin/spark-submit \
