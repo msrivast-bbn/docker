@@ -155,6 +155,7 @@ for dir in $dirs; do
   [ -e "${dir}" ] ||  errexit "ERROR: input directory \"${dir}\" for language \"${languages[$cnt]}\" does not exist"
   [ -d "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" exists but is not a directory"
   [ -r "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" exists but is not readable"
+  [ "$(ls -A ${dir})" ] || errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" is empty - no input files found"
   # This is building VOLUME arguments for the docker run command below
   printf -- '-v %s:/%s ' "$(readlink -f "$dir")" "${languages[$cnt]}" >>"${job_directory}/mounts"
   cnt=$(( $cnt + 1 ))
@@ -211,6 +212,11 @@ echo starting Docker container with port $myPort exposed
 #   /hadoop - a mount to the HADOOP configuration directory
 #   /sharedTop - a mount to the shared_top directory
 #
+if [ x"$A2KD_VERSION" == "x" ]; then
+  DEFTA2KD="deft/a2kd:latest"
+else
+  DEFTA2KD="deft/a2kd:${A2KD_VERSION}"
+fi
 ${DOCKER_CMD:-docker} run -it --rm --name "$UN-$corpus_id" \
   -e LOCAL_USER_ID=$UI \
   -e LOCAL_USER_NAME="$UN" \
@@ -225,4 +231,5 @@ ${DOCKER_CMD:-docker} run -it --rm --name "$UN-$corpus_id" \
   -v $HADOOP_CONF_DIR:/hadoop \
   $(cat ${job_directory}/mounts) \
   -p $myPort:4040 \
-  deft/a2kd a2kd.sh
+  ${DEFTA2KD} a2kd.sh
+
