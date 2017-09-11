@@ -131,17 +131,13 @@ set +o noglob
 if [ "${CLASSPATH_TOP:-x}" != x ]; then
   dir="$CLASSPATH_TOP/classes"
   for fileToProcess in $dir/*.template.*; do
-   if [ ! -d "$first" ] ; then
-     mkdir -p "$first" || errexit "ERROR: could not create $first"
-   fi
+    if [ ! -d "$first" ] ; then
+      mkdir -p "$first" || errexit "ERROR: could not create $first"
+    fi
     # get file name sans the .template.
     bn=$(basename $fileToProcess)
     targetFile=$(echo $bn | sed 's!\.template!!g')
-    # don't process if a file is already in directory
     targetFile="${first}/$targetFile"
-    if [ -f "$targetFile" ]; then
-      continue;
-    fi
     sed -e "s!\$CURDIR!${first}!g" -e "s!\$CLASSPATH_TOP!$CLASSPATH_TOP!g" $fileToProcess >$targetFile
   done
   if grep -qF spark.driver.extraClassPath /input/spark.conf ; then
