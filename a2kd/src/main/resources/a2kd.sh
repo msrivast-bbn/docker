@@ -164,7 +164,7 @@ fi
 
 log "running spark-submit"
 
-${SPARK_HOME}/bin/spark-submit \
+${SPARK_HOME}/bin/spark-submit --verbose \
 	--class adept.e2e.driver.MainE2eDriver \
 	--properties-file /input/spark.conf \
 	${A2KD_HOME}/lib/adept-e2e.jar "${output_dir_hdfs}" ${num_partitions} ${num_ddPartitions} "${job_directory}/config.xml"
