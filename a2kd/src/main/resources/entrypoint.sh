@@ -21,6 +21,10 @@
 #    job_directory - the path to the job directory - will be under shared_top
 
 echo In entrypoint.sh $job_timestamp
+if [ "${1:-x}" == version ]; then
+  cat /git.properties
+  exit 0
+fi
 
 # Some sites use windows ldap for ID, which can introduce spaces into names
 USERNAME=$(echo -n "${LOCAL_USER_NAME:-9001}" | tr "[:space:]" "_")
