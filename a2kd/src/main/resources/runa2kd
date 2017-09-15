@@ -28,6 +28,21 @@ see THIRD-PARTY.txt for a list of the libraries and their licenses.
 EOF
 }
 
+function version {
+echo
+printf "Version:           %s\n" ${git.build.version}
+printf "branch:            %s\n" ${git.branch}
+printf "tags:              %s\n" ${git.tags}
+printf "commit time:       %s\n" ${git.commit.time}
+printf "build time:        %s\n" ${git.build.time}
+printf "closest tag count: %s\n" ${git.closest.tag.commit.count}
+printf "closest tag:       %s\n" ${git.closest.tag.name}
+printf "git commit:        %s\n" ${git.commit.id.abbrev}
+printf "dirty:             %s\n" ${git.dirty}
+echo
+exit 0
+}
+
 function help {
 cat <<EOF
 a2kd
@@ -49,6 +64,24 @@ and the environment variable is not defined, the program will fail.
 environment variables can easily be defined on the command line:
 
 HADOOP_CONF_DIR=/share/hadoop/conf $1 output 5 5 a2kd_config.xml spark.conf /nfs/gold-04/u40
+
+You MAY specify a Spark configuration directory to pick up the default Spark setting for
+your cluster. Use the SPARK_CONF_DIR environment variable for this purpose.
+
+An image with a different version than latest may be used in place of deft/a2kd:latest
+by specifying the version with the A2KD_VERSION environment variable. For instance,
+
+A2KD_VERSION=170803-201933-0233 runa2kd ...
+
+will attempt to use the deft/a2kd:170803-201933-0233 image from your repository.
+
+An image with a completely different name or in a repository other then your local
+repository can be used as well. Simply set the DEFTIMAGE environment variable to
+the name of your image:
+
+DEFTIMAGE=deft-images-host:5000/deft/a2kd:latest runa2kd ...
+
+If both DEFTIMAGE and A2KD_VERSION are set, A2KD_VERSION is ignored.
 
 The parameters that must be defined in the configuration file are documented therein.
 
@@ -73,6 +106,10 @@ function errexit {
 if [ $# -eq 0 -o "$1" = "-h" -o "$1" = "--help" ]; then
   help $(basename $0) 0
 fi
+if [ "$1" = "-v" -o "$1" = "--version" ]; then
+  version
+fi
+
 if [ $# -ne 6 ]; then
   ( >&2 echo "\nERROR: incorrect number of parameters: $#")
   help $(basename $0) 1
@@ -80,6 +117,9 @@ fi
 
 # check for xmllint
 hash xmllint 2>/dev/null || { echo >&2 "I require xmllint but it's not installed or in your PATH.  Aborting."; exit 1; }
+if [ x"$DOCKER_CMD" = x ]; then
+  hash docker 2>/dev/null || { echo >&2 "I require docker but it's not installed or in your PATH.  Aborting."; exit 1; }
+fi
 
 job_timestamp=$(date +%y%m%d%H%M%S)
 echo "The UTC job_timestamp/id of this job is $job_timestamp"
@@ -139,6 +179,7 @@ echo "$job_directory" >"${job_directory}/job_directory"
 echo "$job_timestamp" >"${job_directory}/job_timestamp"
 cp "$a2kd_config" "${job_directory}/config.xml"
 cp "$spark_config" "${job_directory}/spark.conf"
+spark_config="${job_directory}/spark.conf"
 
 # Get the language(s) and their input directories so we can mount them in the Docker container
 dirs=$(echo 'cat /config/algorithm_set/input_directory/text()' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)")
@@ -169,7 +210,7 @@ chmod ug=rw,o=r ${job_directory}/*
 corpus_id=$(echo 'cat /config/kb_config/@corpus_id' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
 
 # Check for or set HADOOP_CONF_DIR
-if [ ! "$HADOOP_CONF_DIR" ] ; then
+if [  x"$HADOOP_CONF_DIR" = x ] ; then
   for HCD in /etc/hadoop/conf ~/hadoop/conf /var/lib/hadoop/conf; do
     if [ -d $HCD -a -r $HCD ]; then
       HADOOP_CONF_DIR="$HCD"
@@ -188,6 +229,77 @@ fi
 [ -d "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR $HADOOP_CONF_DIR is not a directory"
 [ -r "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR $HADOOP_CONF_DIR found but is not readable"
 [ -x "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR $HADOOP_CONF_DIR found but is not searchable"
+
+if [ x"$SPARK_CONF_DIR" != x ] ; then
+  [ -e "$SPARK_CONF_DIR" ] || errexit "ERROR: SPARK_CONF_DIR $SPARK_CONF_DIR does not exist"
+  [ -d "$SPARK_CONF_DIR" ] || errexit "ERROR: SPARK_CONF_DIR $SPARK_CONF_DIR is not a directory"
+  [ -r "$SPARK_CONF_DIR" ] || errexit "ERROR: SPARK_CONF_DIR $SPARK_CONF_DIR found but is not readable"
+  [ -x "$SPARK_CONF_DIR" ] || errexit "ERROR: SPARK_CONF_DIR $SPARK_CONF_DIR found but is not searchable"
+fi
+# Fixup the class path iff necessary
+# Extract the classpath from the spark configuration file
+SCP=$(awk '/spark.driver.extraClassPath/ {print $2}' "${spark_config}" )
+if [ "x$SCP" = x ]; then
+  SCP=$(awk '/spark.executor.extraClassPath/ {print $2}' "${spark_config}" )
+fi
+if [ "x$SCP" = x ]; then
+  SCP=$(awk '/extraClassPath/ {print $2}' "${spark_config}" )
+fi
+if [ "x$SCP" = x ]; then
+  echo "ERROR: ${0}: extraClassPath definition not found in spark configuration"
+  exit 1
+fi
+
+set -o noglob
+cnt=0
+dirs=$(echo ${SCP:-x} | tr ':' ' ')
+# convert to an array
+for dir in $dirs; do
+  dir=${dir//\/\*/}
+  [ ${dir: -4} == ".jar" ] && continue
+  [ -e "$dir" ] || errexit "ERROR: path \"$dir\" in spark classpath does not exist"
+  [ -d "$dir" ] || errexit "ERROR: path \"$dir\" in spark classpath is not a directory"
+  [ -r "$dir" ] || errexit "ERROR: directory \"$dir\" in spark classpath is not readable"
+  [ -x "$dir" ] || errexit "ERROR: directory \"$dir\" in spark classpath is not searchable"
+  # The first must be our CLASSPATH_TOP with a following asterisk
+  if [ -d "${dir}/com/bbn/serif" ]; then
+    CLASSPATH_TOP="$(dirname $dir)"
+  fi
+done
+first="${job_directory}/classes"
+if [ ! -d "$first" ] ; then
+  mkdir -p "$first" || errexit "ERROR: could not create $first"
+fi
+set +o noglob
+if [ "${CLASSPATH_TOP:-x}" != x ]; then
+  dir="$CLASSPATH_TOP/classes"
+  for fileToProcess in $dir/*.template.*; do
+    # get file name sans the .template.
+    bn=$(basename $fileToProcess)
+    targetFile=$(echo $bn | sed 's!\.template!!g')
+    targetFile="${first}/$targetFile"
+    sed -e "s!\$CURDIR!${first}!g" -e "s!\$CLASSPATH_TOP!$CLASSPATH_TOP!g" $fileToProcess >$targetFile
+  done
+  if grep -qF spark.driver.extraClassPath "${spark_config}" ; then
+    sed -i -e 's!^\s*\(spark.driver.extraClassPath\s*\)\(\w*\)!\1'"$first"':\2!' "${spark_config}"
+  else
+    echo "spark.driver.extraClassPath   ${first}:${SCP}" >> "${spark_config}"
+  fi
+  if grep -qF spark.executor.extraClassPath "${spark_config}" ; then
+    sed -i -e 's!^\s*\(spark.executor.extraClassPath\s*\)\(\w*\)!\1'"$first"':\2!' "${spark_config}"
+  else
+    echo "spark.executor.extraClassPath ${first}:${SCP}" >> "${spark_config}"
+  fi
+fi
+# set files up if log4j.properties is present
+if ! grep -F log4j.properties  "${spark_config}" 2>&1 1>/dev/null ; then
+  if [ -f "${job_directory}/log4j.properties" ]; then
+    cat >> "${spark_config}" <<EOF
+spark.executor.extraJavaOptions -Dlog4j.configuration="${job_directory}/log4j.properties"
+spark.driver.extraJavaOptions   -Dlog4j.configuration="${job_directory}/log4j.properties"
+EOF
+  fi
+fi
 
 myPort=4040
 while $(netstat -tln | grep -qF ":$myPort ") ; do
@@ -212,11 +324,29 @@ echo starting Docker container with port $myPort exposed
 #   /hadoop - a mount to the HADOOP configuration directory
 #   /sharedTop - a mount to the shared_top directory
 #
-if [ x"$A2KD_VERSION" == "x" ]; then
-  DEFTA2KD="deft/a2kd:latest"
+if [ x"$DEFTIMAGE" == "x" ]; then
+  if [ x"$A2KD_VERSION" == "x" ]; then
+    DEFTA2KD="deft/a2kd:latest"
+  else
+    DEFTA2KD="deft/a2kd:${A2KD_VERSION}"
+    if ! docker inspect "$DEFTA2KD" >/dev/null 2>&1 ; then
+      DEFTA2KD="${UN}/a2kd:${A2KD_VERSION}"
+      if ! docker inspect "$DEFTA2KD" >/dev/null 2>&1 ; then
+        echo "A2KD_VERSION is set to \"${A2KD_VERSION}\", but no image named \"deft/a2kd:${A2KD_VERSION}\" or \"${DEFTA2KD}\" can be found"
+        exit 1
+      fi
+    fi
+  fi
 else
-  DEFTA2KD="deft/a2kd:${A2KD_VERSION}"
+  if ! docker inspect "$DEFTIMAGE" >/dev/null 2>&1 ; then
+    echo "DEFTIMAGE is set to \"${DEFTIMAGE}\", but no image with that name can be found!"
+    exit 1
+  fi
+  DEFTA2KD=$DEFTIMAGE
 fi
+
+echo "Running docker image ${DEFTA2KD}" 
+
 ${DOCKER_CMD:-docker} run -it --rm --name "$UN-$corpus_id" \
   -e LOCAL_USER_ID=$UI \
   -e LOCAL_USER_NAME="$UN" \

@@ -99,69 +99,6 @@ done
 output_dir_hdfs="output_${job_timestamp}"
 hdfs dfs -mkdir "$output_dir_hdfs"
 
-# Fixup the class path iff necessary
-# Extract the classpath from the spark configuration file
-SCP=$(awk '/spark.driver.extraClassPath/ {print $2}' /input/spark.conf)
-if [ "x$SCP" = x ]; then
-  SCP=$(awk '/spark.executor.extraClassPath/ {print $2}' /input/spark.conf)
-fi
-if [ "x$SCP" = x ]; then
-  SCP=$(awk '/extraClassPath/ {print $2}' /input/spark.conf)
-fi
-set -o noglob
-cnt=0
-dirs=$(echo ${SCP:-x} | tr ':' ' ')
-# convert to an array
-dirs=( $dirs )
-for dir in $dirs; do
-  if [ "$dir" = x ]; then
-    echo "${0}: extraClassPath definition not found in spark configuration"
-    break;
-  fi
-  # The first must be our CLASSPATH_TOP with a following asterisk
-  dir=$(dirname "${dir}" )
-  if [ -d "${dir}/classes/com/bbn/serif" ]; then
-    CLASSPATH_TOP="$dir"
-  else
-    continue
-  fi
-done
-first="${job_directory}/classes"
-set +o noglob
-if [ "${CLASSPATH_TOP:-x}" != x ]; then
-  dir="$CLASSPATH_TOP/classes"
-  for fileToProcess in $dir/*.template.*; do
-    if [ ! -d "$first" ] ; then
-      mkdir -p "$first" || errexit "ERROR: could not create $first"
-    fi
-    # get file name sans the .template.
-    bn=$(basename $fileToProcess)
-    targetFile=$(echo $bn | sed 's!\.template!!g')
-    targetFile="${first}/$targetFile"
-    sed -e "s!\$CURDIR!${first}!g" -e "s!\$CLASSPATH_TOP!$CLASSPATH_TOP!g" $fileToProcess >$targetFile
-  done
-  if grep -qF spark.driver.extraClassPath /input/spark.conf ; then
-    sed -i -e 's!^\s*\(spark.driver.extraClassPath\s*\)\(\w*\)!\1'"$first"':\2!' /input/spark.conf
-  else
-    echo "spark.driver.extraClassPath	${first}:${SCP}" >> /input/spark.conf
-  fi
-  if grep -qF spark.executor.extraClassPath /input/spark.conf ; then
-    sed -i -e 's!^\s*\(spark.executor.extraClassPath\s*\)\(\w*\)!\1'"$first"':\2!' /input/spark.conf
-  else
-    echo "spark.executor.extraClassPath	${first}:${SCP}" >> /input/spark.conf
-  fi
-fi
-
-# set files up if log4j.properties is present
-if ! grep -F log4j.properties /input/spark.conf 2>&1 1>/dev/null ; then
-  if [ -f "${job_directory}/log4j.properties" ]; then
-    cat >>/input/spark.conf <<EOF
-spark.executor.extraJavaOptions -Dlog4j.configuration="${job_directory}/log4j.properties"
-spark.driver.extraJavaOptions   -Dlog4j.configuration="${job_directory}/log4j.properties"
-EOF
-  fi
-fi
-
 log "running spark-submit"
 
 ${SPARK_HOME}/bin/spark-submit --verbose \

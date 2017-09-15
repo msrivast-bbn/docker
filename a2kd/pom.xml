@@ -175,15 +175,15 @@
         <configuration>
           <images>
             <image>
-              <name>deft/${project.artifactId}:${timestamp}</name>
+              <name>${user.name}/${project.artifactId}:${timestamp}</name>
               <build>
                 <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
               </build>
             </image>
           </images>
           <verbose>true</verbose>
-          <saveFile>${project.build.directory}/deft_${project.artifactId}.${timestamp}.tar.xz</saveFile>
-          <saveName>deft/${project.artifactId}:${timestamp}</saveName>
+          <saveFile>${project.build.directory}/${user.name}_${project.artifactId}-${timestamp}.tar.xz</saveFile>
+          <saveName>${user.name}/${project.artifactId}:${timestamp}</saveName>
         </configuration>
         <executions>
           <execution>
