@@ -182,7 +182,7 @@
             </image>
           </images>
           <verbose>true</verbose>
-          <saveFile>${project.build.directory}/${user.name}_${project.artifactId}-${timestamp}.tar.xz</saveFile>
+          <saveFile>${project.build.directory}/${user.name}_${project.artifactId}-${timestamp}.tar</saveFile>
           <saveName>${user.name}/${project.artifactId}:${timestamp}</saveName>
         </configuration>
         <executions>

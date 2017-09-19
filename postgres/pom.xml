@@ -29,7 +29,7 @@
             </image>
           </images>
           <verbose>true</verbose>
-          <saveFile>${project.build.directory}/${user.name}_${project.artifactId}.tar.xz</saveFile>
+          <saveFile>${project.build.directory}/${user.name}_${project.artifactId}.tar</saveFile>
           <saveName>${user.name}/${project.artifactId}:${maven.build.timestamp}</saveName>
         </configuration>
         <executions>
