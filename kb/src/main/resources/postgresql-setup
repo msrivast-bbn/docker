@@ -39,9 +39,8 @@ file_env() {
 
 perform_initdb(){
     if [ ! -e "$PGTOP" ]; then
-        mkdir -p "$PGTOP"
-        chown postgres: "$PGTOP"
-        chmod 775 "$PGTOP"
+        sudo -u postgres mkdir -p "$PGTOP"
+        sudo -u postgres chmod 775 "$PGTOP"
     fi
     if [ ! -e "$PGDATA" ]; then
         sudo -u postgres -g postgres mkdir -p "$PGDATA" || return 1
