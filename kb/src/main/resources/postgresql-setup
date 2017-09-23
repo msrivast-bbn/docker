@@ -8,7 +8,8 @@ PGENGINE=/usr/pgsql-9.6/bin
 
 SERVICE_NAME=postgresql
 
-PGTOP=${PGTOP:-"/var/lib/data/pgsql"}
+VARTOP=/var/lib/data
+PGTOP=${PGTOP:-"${VARTOP}/pgsql"}
 PGDATA=${PGDATA:-"$PGTOP/data"}
 PGPORT="5432"
 
@@ -18,6 +19,23 @@ PGLOG="$PGTOP/initdb.log"
 export PGDATA PGPORT PGENGINE PGTOP PGLOG
 
 script_result=0
+
+if [ ! -e "${VARTOP}" ]; then
+  echo "ERROR: \"${VARTOP}\" does not exist"
+  exit 1
+fi
+if [ ! -d "${VARTOP}" ]; then
+  echo "ERROR: \"${VARTOP}\" is not a directory"
+  exit 1
+fi
+if [ ! -r "${VARTOP}" ]; then
+  echo "ERROR: \"${VARTOP}\" is not readable"
+  exit 1
+fi
+if [ ! -w "${VARTOP}" ]; then
+  echo "ERROR: \"${VARTOP}\" is not writable"
+  exit 1
+fi
 
 file_env() {
 	local var="$1"
@@ -38,45 +56,44 @@ file_env() {
 }
 
 perform_initdb(){
+    if [ ! -e "/var/run/postgresql" ]; then
+        mkdir -p "/var/run/postgresql"
+        chmod 755 "/var/run/postgresql"
+    fi
+
+    file_env 'POSTGRES_PASSWORD'
+    file_env 'POSTGRES_USER' 'postgres'
+    file_env 'POSTGRES_DB' "$POSTGRES_USER"
+
     if [ ! -e "$PGTOP" ]; then
         sudo -u postgres mkdir -p "$PGTOP"
         sudo -u postgres chmod 775 "$PGTOP"
     fi
     if [ ! -e "$PGDATA" ]; then
-        sudo -u postgres -g postgres mkdir -p "$PGDATA" || return 1
-        sudo -u postgres -g postgres chmod 775 "$PGDATA"
+        sudo -u postgres mkdir -p "$PGDATA" || return 1
+        sudo -u postgres chmod 775 "$PGDATA"
     fi
 
     # Create the initdb log file if needed
     if [ ! -e "$PGLOG" -a ! -h "$PGLOG" ]; then
-        sudo -u postgres -g postgres touch "$PGLOG" || return 1
-        sudo -u postgres -g postgres chmod 644 "$PGLOG"
-    fi
-
-    if [ ! -e "/run/postgresql" ]; then
-        mkdir -p "/run/postgresql"
-        chown postgres:postgres "/run/postgresql"
-        chmod 755 "/run/postgresql"
+        sudo -u postgres touch "$PGLOG" || return 1
+        sudo -u postgres chmod 644 "$PGLOG"
     fi
 
     # Create directory for postmaster log files
     if [ ! -e "$PGLOG" -a ! -h "$PGLOG" ]; then
-        sudo -u postgres -g postgres mkdir -p "$PGDATA/pg_log"
-        sudo -u postgres -g postgres chmod 774 "$PGDATA/pg_log"
+        sudo -u postgres mkdir -p "$PGDATA/pg_log"
+        sudo -u postgres chmod 774 "$PGDATA/pg_log"
     fi
 
     # Initialize the database
-    cat >/tmp/s1 <<SUDO
-$PGENGINE/initdb --pgdata=$PGDATA >> $PGLOG 2>&1 < /dev/null
+    sudo -u postgres bash <<SUDO
+$PGENGINE/initdb --pgdata=$PGDATA >>$PGLOG 2>&1 < /dev/null
 SUDO
-    chmod +x /tmp/s1
-    su -l postgres -s /bin/bash -c /tmp/s1
 
-    mv /postgresql.conf "$PGDATA"
-    chown postgres:postgres "$PGDATA/postgresql.conf"
-    chmod 744 "$PGDATA/postgresql.conf"
+    sudo -u postgres cp /postgresql.conf "$PGDATA"
+    sudo -u postgres chmod 744 "$PGDATA/postgresql.conf"
 
-    file_env 'POSTGRES_PASSWORD'
     if [ "$POSTGRES_PASSWORD" ]; then
         pass="PASSWORD '$POSTGRES_PASSWORD'"
         authMethod=md5
@@ -101,28 +118,18 @@ SUDO
         authMethod=trust
     fi
 
-    {
-        echo
-        echo "host all all all $authMethod"
-    } >> "$PGDATA/pg_hba.conf"
+    sudo -u postgres sed -i "$ a\host all all all $authMethod" "$PGDATA/pg_hba.conf" 
+    sudo -u postgres tail "$PGDATA/pg_hba.conf"
 
-    cat >/tmp/s2 <<SUDO
+    sudo -u postgres bash <<SUDO
 PGUSER=${PGUSER:-postgres} $PGENGINE/pg_ctl -D $PGDATA -o "-c listen_addresses='localhost'" -w start
 SUDO
-    chmod +x /tmp/s2
-    su -l postgres -s /bin/bash -c /tmp/s2
-
-    file_env 'POSTGRES_USER' 'postgres'
-    file_env 'POSTGRES_DB' "$POSTGRES_USER"
 
     psql=( $PGENGINE/psql -v ON_ERROR_STOP=1 )
     if [ "$POSTGRES_DB" != 'postgres' ]; then
-        cat >/tmp/s3 <<SUDO
-echo "CREATE DATABASE $POSTGRES_DB\;" | ${psql[@]} --username postgres
-echo
-SUDO
-        chmod +x /tmp/s3
-        su -l postgres -s /bin/bash -c /tmp/s3
+        ${psql[@]} --username postgres <<-PSQL
+CREATE DATABASE $POSTGRES_DB;
+PSQL
     fi
 
     if [ "$POSTGRES_USER" = 'postgres' ]; then
@@ -130,31 +137,30 @@ SUDO
     else
         op='CREATE'
     fi
-    cat >/tmp/s4 <<SUDO
-echo "$op USER "$POSTGRES_USER" WITH SUPERUSER $pass \;" | ${psql[@]} --username postgres 
-echo
-SUDO
-    chmod +x /tmp/s4
-    su -l postgres -s /bin/bash -c /tmp/s4
+    ${psql[@]} --username postgres <<-PSQL
+$op USER "$POSTGRES_USER" WITH SUPERUSER $pass;
+PSQL
 
     psql+=( --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" )
 
-    echo
-
-    cat >/tmp/s5 <<SUDO
+    sudo -u postgres bash <<SUDO
 PGUSER=${PGUSER:-postgres} $PGENGINE/pg_ctl -D $PGDATA -m fast -w stop
-echo
 SUDO
-    chmod +x /tmp/s5
-    su -l postgres -s /bin/bash -c /tmp/s5
 
     echo 'PostgreSQL init process complete; ready for start up.'
-    echo
 
-    if [ -f "$PGDATA/PG_VERSION" ]; then
-        return 0
-    fi
-    return 1
+    foo=/tmp/t$$
+    touch $foo
+    chmod 777 $foo
+    trap "rm -f $foo" EXIT
+    sudo -u postgres bash <<SUDO
+if [ -f "$PGDATA/PG_VERSION" ]; then
+    echo 0 >$foo
+else
+    echo 1 >$foo
+fi
+SUDO
+    return `cat $foo`
 }
 
 initdb(){
