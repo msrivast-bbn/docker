@@ -70,17 +70,6 @@
     <connection>scm:git:ssh://www.deftware.bbn.com:7999/adept/deft.git</connection>
     <developerConnection>scm:git:ssh://www.deftware.bbn.com:7999/adept/deft.git</developerConnection>
   </scm>
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>io.fabric8</groupId>
-          <artifactId>docker-maven-plugin</artifactId>
-          <version>0.21.0</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
   <modules>
     <module>postgres</module>
     <module>parliament</module>
