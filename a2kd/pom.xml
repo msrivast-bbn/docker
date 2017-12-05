@@ -3,9 +3,9 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>mil.darpa.i2o</groupId>
+    <groupId>com.bbn.adept</groupId>
     <artifactId>deft-docker</artifactId>
-    <version>2.7.1</version>
+    <version>2.7.3-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>a2kd</artifactId>
@@ -17,10 +17,17 @@
   </properties>
   <dependencies>
     <dependency>
-      <groupId>adept</groupId>
+      <groupId>com.bbn.adept</groupId>
       <artifactId>adept-e2e</artifactId>
-      <version>${project.version}</version>
+      <version>2.7.3-SNAPSHOT</version>
       <type>jar</type>
+    </dependency>
+    <dependency>
+      <groupId>com.bbn.adept</groupId>
+      <artifactId>adept-e2e</artifactId>
+      <version>2.7.3-SNAPSHOT</version>
+      <type>zip</type>
+      <classifier>bin</classifier>
     </dependency>
   </dependencies>
   <build>
@@ -100,9 +107,8 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>adept</groupId>
+                  <groupId>com.bbn.adept</groupId>
                   <artifactId>adept-e2e</artifactId>
-                  <version>${project.version}</version>
                   <type>jar</type>
                   <outputDirectory>${project.build.directory}/appassembler/lib</outputDirectory>
                 </artifactItem>
@@ -119,9 +125,8 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>adept</groupId>
+                  <groupId>com.bbn.adept</groupId>
                   <artifactId>adept-e2e</artifactId>
-                  <version>${project.version}</version>
                   <type>zip</type>
                   <classifier>bin</classifier>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
@@ -138,9 +143,8 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>adept</groupId>
+                  <groupId>com.bbn.adept</groupId>
                   <artifactId>adept-e2e</artifactId>
-                  <version>${project.version}</version>
                   <type>zip</type>
                   <classifier>bin</classifier>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
@@ -157,9 +161,8 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>adept</groupId>
+                  <groupId>com.bbn.adept</groupId>
                   <artifactId>adept-e2e</artifactId>
-                  <version>${project.version}</version>
                   <type>jar</type>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                   <includes>/e2e_config.template.xml,kbresolver_properties.template.xml</includes>
