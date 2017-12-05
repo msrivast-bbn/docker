@@ -1,0 +1,49 @@
+#!/bin/bash
+export JAVA_HOME=/usr/lib/jvm/jre-1.8.0-openjdk.x86_64
+PIDFILE=/usr/local/parliament/data/pid.txt
+function stop() {
+  date
+  printf "\n--------------\nStopping Parliament\n----------------\n\n"
+  /usr/local/parliament/StartParliamentDaemon.sh stop
+}
+
+date
+while [ -s "$PIDFILE" ]; do
+  procs=$(cat "$PIDFILE")
+  for proc in $procs; do
+    printf "PID file exists - Stopping Parliament %d\n" $proc
+    cnt=0
+    while [ -n "$proc" -a  -d /proc/$proc ]; do
+      echo "$proc" >"$PIDFILE"
+      /usr/local/parliament/StartParliamentDaemon.sh stop
+      cnt=$(( cnt + 1 ))
+      sleep 1
+    done
+  done
+  rm -f "$PIDFILE"
+done
+rm -f "$PIDFILE"
+printf "%d Starting Parliament %s\n" $$ $(id -u)
+trap stop TERM KILL
+/usr/local/parliament/StartParliamentDaemon.sh start
+cnt=0
+while [ $cnt -lt 60 -a ! -s "$PIDFILE" ]; do 
+  sleep 1
+  cnt=$(( cnt + 1 ))
+done
+if [ ! -s "$PIDFILE" ]; then
+  printf "Start Parliament FAILED (No pid.txt file or pid.txt is empty)\n"
+  exit 1
+fi
+proc=$(cat "$PIDFILE")
+if [ -z "$proc" -o ! -d "/proc/$proc" ]; then
+  printf "Start Parliament FAILED (No process)\n"
+  exit 1
+fi
+printf "Parliament Started (%d)\n" "$proc"
+while [ -d /proc/$proc ]; do 
+  sleep 10 &
+  wait
+done
+printf "Parliament Terminated\n"
+

@@ -1,0 +1,371 @@
+#!/bin/bash
+VERSION=@project.version@
+
+#
+# Script run on the dockerd host to start the A2KD Container.
+umask 002
+
+function printLicense {
+  cat <<-"EOF"
+Copyright © 2012-2017 Raytheon BBN Technologies, Inc.
+Cambridge, MA USA
+All rights reserved.
+
+This program and associated material contains information whose export or 
+disclosure to Non-U.S. Persons, wherever located, is subject to the Export 
+Administration Regulations (EAR) (15 C.F.R. §730-774). Specifically,
+Raytheon BBN Technologies conducted an internal review and determined that this 
+information is export controlled as EAR99. Exports contrary to U.S. law are
+prohibited.
+
+As part of the DEFT effort, BBN SERIF(TM) is being provided with Government
+Purpose Rights. Please see DFARS 252.227-7014 for details.
+
+Various third-party libraries are incorporated into this application. Please
+see THIRD-PARTY.txt for a list of the libraries and their licenses.
+
+-------------------------------------------------------------------------------
+
+EOF
+}
+
+errexit() {
+   ( >&2 echo "$1")
+   logger -p user.error "$1"
+   rm -rf /tmp/input$$
+   exit 1
+}
+
+version() {
+  printf "\n----------\nrunkb version information\n----------\n"
+  printf "Version:           %s\n" ${git.build.version}
+  printf "branch:            %s\n" ${git.branch}
+  printf "tags:              %s\n" ${git.tags}
+  printf "commit time:       %s\n" ${git.commit.time}
+  printf "build time:        %s\n" ${git.build.time}
+  printf "closest tag count: %s\n" ${git.closest.tag.commit.count}
+  printf "closest tag:       %s\n" ${git.closest.tag.name}
+  printf "git commit:        %s\n" ${git.commit.id.abbrev}
+  printf "dirty:             %s\n" ${git.dirty}
+  echo
+  exit 0
+}
+
+usage() {
+if [ x"${1}" = x ]; then
+  cmd=runkb
+else
+  cmd=$(basename "$1")
+fi
+cat <<EOF
+
+Usage: $cmd [-d <data-dir-path>] config
+
+where:
+    config is the path of the kb xml configuration file
+
+Options:
+   -d  path to a directory in the local file system under which
+       the databases will be stored. If not specified, the
+       databases will be stored within the container itself.
+
+
+EOF
+}
+
+help() {
+if [ x"${1}" = x ]; then
+  cmd=runkb
+else
+  cmd=$(basename "$1")
+fi
+cat <<EOF
+
+NAME
+    $cmd - Create an A2KD Knowledge Base (KB) Server Instance
+
+SYNOPSIS
+    $cmd config [OPTION]... 
+    $cmd -v | --version
+    $cmd -h | --help
+
+DESCRIPTION
+    Create a Docker container running both an instance of PostgreSQL and a Parliament
+    server available on the ports specified in the specified configuration file. Access
+    to the PostgreSQL database will be restricted to the user using the password specified
+    in the file. If the -d option is NOT specified, the actual databases will reside within
+    the Docker container file system. If the -d option IS specified, the databases will
+    reside under the specified directory on the local file system.
+
+    The container name will be that of the corpus specified in the configuration file
+
+    The option is as follows:
+
+    -d <path>  Optional path to a directory accessible by the local host. This directory
+               does not have to exist when the command is invoked, but you must have
+               the permissions necessary to create the remaining nonexistent path in that
+               case.
+
+               If not specified, the databases will be maintained within the docker container
+               itself and consume space managed in the Docker subsystem. This may prove to be 
+               a significant limitation over time as your accumulation of data grows.
+
+ENVIRONMENT
+    The command will attempt to locate a 'matching' Docker KB image on the host specified in 
+    the configuration file to create the container with. If no matching image is available, 
+    it will attempt to use the 'youngest' (in terms of creation date) KB image available. If
+    no KB image can be found, the command will fail.
+
+    The DEFTKB environment variable can be used to override this process and specify the 
+    Docker image you wish to use on the target docker host. If this variable is specified and
+    a matching image can not be found, the command will fail.
+
+EXAMPLES
+Create a KB using the access parameters specified in the configuration file, storing the data 
+within the container:
+
+\$> $cmd kbConfig.xml 
+
+Create a KB using the access parameters specified in the configuration file, storing the data 
+in the mounted NFS system at the specified path:
+
+\$> $cmd -d /nfs/custServ-01/data/corpus01 kbConfig.xml 
+
+EOF
+}
+
+# $1 path
+# type (fdh)
+# mode (rw)
+# option
+checkFSO() {
+  if [ x"${1}" = x ]; then
+    errors+="    path \"$1\" specified for $4 is empty\n" 
+  fi
+  if [ ! -e "$1" ] ; then
+    errors+="    path \"$1\" specified for $4 does not exist\n"
+    return
+  fi
+  if [ $2 = f -a ! -f "$1" ] ; then
+    errors+="    path \"$1\" specified for $4 is not a file\n"
+  fi
+  if [ $2 = d -a ! -d "$1" ] ; then
+    errors+="    path \"$1\" specified for $4 is not a directory\n"
+  fi
+  case "$3" in
+    *r* ) if [ ! -r "$1" ]; then
+        errors+="    path \"$1\" specified for $4 is not readable\n"
+      fi;;&
+    *w* ) if [ ! -w "$1" ]; then
+        errors+="    path \"$1\" specified for $4 is not writable\n"
+      fi;;
+    *x* ) if [ ! -x "$1" ]; then
+        errors+="    path \"$1\" specified for $4 is not searchable\n"
+      fi;;
+  esac
+}
+
+if [ $# = 0 ]; then
+  usage
+  exit 0
+fi
+
+# read the options
+
+TEMP=`getopt -o d:vh --long data-dir:,help,version -n 'runkb' -- "$@"`
+if [ $? -ne 0 ]; then
+  usage
+  exit 1
+fi
+eval set -- "$TEMP"
+
+unset dataDirectory a2kdConfiguration
+dopt=0 
+
+while [ $# -gt 0 ] ; do
+  case "$1" in
+    -d|--data-dir)
+      ((dopt++))
+      case "$2" in
+        "") shift 2;;
+        *) dataDirectory="$2"; shift 2;;
+      esac ;;
+    -h|--help)
+      help "$0"
+      exit 0
+      ;;
+    -v|--version)
+      version
+      exit 0
+      ;;
+    --) shift ;;
+    -*) printf "Error: Unknown option %s\n" "$1"; usage; exit 1 ;;
+    *) kbConfiguration="$1"
+       shift; 
+  esac
+done
+
+[ x"${kbConfiguration}" = x ] && errors=$(printf "%s    no/empty value specified for kb configuration file\n" "$errors" )
+
+# output directory - create if not there
+if [ "$dataDirectory" -a ! -d "$dataDirectory" ] ; then
+  mkdir -p "$dataDirectory"
+  chmod 777 "$dataDirectory"
+fi
+
+[ "x$dataDirectory" != x ] && checkFSO "$dataDirectory" d rw "data directory"
+checkFSO "$kbConfiguration" f r "kb config"
+
+if [ ${#errors} -gt 0 ]; then
+  printf "\nERROR:\n$errors"
+  usage
+  exit 1
+fi
+
+# check for xmllint
+hash xmllint 2>/dev/null || { echo >&2 "I require xmllint but it's not installed or in your PATH.  Aborting."; exit 1; }
+hash docker 2>/dev/null || { echo >&2 "I require docker but it's not installed or in your PATH.  Aborting."; exit 1; }
+# Get corpus_id to use as docker container name
+corpusId=$(echo 'cat /config/kb_config/@corpus_id' | xmllint --shell "$kbConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+tripleStoreUrl=$(echo 'cat /config/kb_config/triple_store/@url' | xmllint --shell "$kbConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+dbHost=$(echo 'cat /config/kb_config/metadata_db/@host' | xmllint --shell "$kbConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+dbUser=$(echo 'cat /config/kb_config/metadata_db/@username' | xmllint --shell "$kbConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+dbPasswd=$(echo 'cat /config/kb_config/metadata_db/@password' | xmllint --shell "$kbConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+dbPort=$(echo 'cat /config/kb_config/metadata_db/@port' | xmllint --shell "$kbConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+dbName=$(echo 'cat /config/kb_config/metadata_db/@dbName' | xmllint --shell "$kbConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+
+TSFIELDS=$(echo $tripleStoreUrl | awk 'match($0, "^([^:]+)://([^:]+):([0-9]+)(.*)$", ary) { printf "tsProto=%s\ntsHost=%s\ntsPort=%d\ntsPath=%s\n", ary[1], ary[2], ary[3], ary[4] }')
+
+eval $TSFIELDS
+
+if [ "x$corpusId" = x ]; then
+  printf "\nERROR: No corpus ID specified in the kb_config corpus_id attribute\n"
+  exit 1
+fi
+if [ "x$dbUser" = x ]; then
+  printf "\nERROR: No username specified in the metadata_db username attribute\n"
+  exit 1
+fi
+if [ "x$dbPasswd" = x ]; then
+  printf "\nERROR: No password specified in the metadata_db password attribute\n"
+  exit 1
+fi
+if [ "x$dbHost" = x ]; then
+  printf "\nERROR: No host specified in the metadata_db host attribute\n"
+  exit 1
+fi
+if [ "x$dbPort" = x ]; then
+  printf "\nERROR: No port specified in the metadata_db port attribute\n"
+  exit 1
+fi
+if [ "x$dbName" = x ]; then
+  printf "\nERROR: No database specified in the metadata_db dbName attribute\n"
+  exit 1
+fi
+if [[ ! "$dbPort" =~ ^[0-9]+$ ]]; then
+  printf "\nERROR: value specified for port (\'$dbPort\') in the metadata_db port attribute is not an integer\n"
+  exit 1
+fi
+if [ $dbPort -le 0 ]; then
+  printf "\nERROR: value specified for port (\'$dbPort\') in the metadata_db port attribute is invalid\n"
+  exit 1
+fi
+if [ "x$tsHost" = x ]; then
+  printf "\nERROR: No host specified in the triple_store url attribute\n"
+  exit 1
+fi
+if [ "x$tsPort" = x ]; then
+  printf "\nERROR: No port specified in the triple_store url attribute\n"
+  exit 1
+fi
+if [[ ! "$tsPort" =~ ^[0-9]+$ ]]; then
+  printf "\nERROR: value specified for triple_store port (\'$tsPort\') in the url attribute is not an integer\n"
+  exit 1
+fi
+if [ $tsPort -le 0 ]; then
+  printf "\nERROR: value specified for triple_store port (\'$tsPort\') in the url attribute is invalid\n"
+  exit 1
+fi
+if [ $tsPort -eq $dbPort ]; then
+  printf "\nERROR: value specified for triple_store port (\'$tsPort\') is the same as that specified for the database port!\n"
+  exit 1
+fi
+if [ "$dbHost" != "$tsHost" ]; then
+  printf "\nERROR: this script is intended to start a KB instance, which is two services on the same host.\n\tThe triple store host:%s  differs from the PostgreSQL host:%s\n", "$tsHost", "$dbHost"
+  exit 1
+fi
+
+DOCKERCMD=docker
+if [ "$DOCKER_HOST" ]; then
+  echo $DOCKER_HOST | grep -q $dbHost
+  if [ $? -ne 0 ]; then
+    printf "Your DOCKER_HOST (\'%s\') setting does not match the host name specified in the configuration file(\'%s\')\n" "$DOCKER_HOST" "$tsHost"
+    printf "Setting DOCKER_HOST to match configuration file....\n"
+    ary=($(echo ${DOCKER_HOST} | tr ':' ' '))
+    ary[1]="//$tsHost"
+    export DOCKER_HOST="tcp://${tsHost}:2376"
+    echo DOCKER_HOST is now set to $DOCKER_HOST
+ fi
+else
+  if [ "$tsHost" != $(hostname) ]; then
+    printf "The host specified in the configuration file (\'%s\') does not match the host name returned by hostname (\'%s\')\n" "$tsHost" "$(hostname)"
+    printf "Please correct and try again\n"
+    exit 1
+  fi
+  running=$($DOCKERCMD ps --all)
+  echo $running | grep -F 'permission denied' && DOCKERCMD='sudo docker'
+fi
+
+running=$($DOCKERCMD ps --all)
+if [ $? -ne 0 ]; then
+  printf "ERROR: could not run docker command \'$DOCKERCMD ps --all\'. Returned error was:\n%s\n" "$running"
+  printf "\n----\nPlease investigate, correct the cause and retry\n"
+  exit 1
+fi
+
+ports=$(echo "$running" | grep -E ":($tsPort|$dbPort)->")
+if [ -n "$ports" ]; then
+  printf "\nERROR: a port specified in the configuration file (\'%s\' or \'%s\') is already in use on the Docker host:\n\n     " "$dbPort" "$tsPort"
+  echo "$ports"
+  printf "\n      Please take corrective action and try again.\n\n"
+  exit 1
+fi
+
+corpus=$(echo "$running" | grep ".*$corpusId\s*$")
+if [ -n "$corpus" ]; then
+  printf "\nERROR: a KB instance is already running with the name specified in the configuration file for the corpus_id (\'%s\') on the Docker host:\n\n     " "$corpusId"
+  echo "$corpus"
+  printf "\n      Please take corrective action and try again.\n\n"
+  exit 1
+fi
+# Try for an image with the same version as I am.
+imageId=$($DOCKERCMD images --filter label=type=KB --filter label=version=$VERSION | awk 'NR > 1 {print $3;exit}')
+if [ -z "$imageId" ]; then
+  printf "\nERROR: could not find a Docker KB image with a version label of %s on Docker host %s\n" "$VERSION" "$tsHost"
+  printf "\n      Please take corrective action and try again.\n\n"
+  exit 1
+fi
+
+VOPT=
+if [ $dopt -gt 0 -a -n "$dataDirectory" ]; then
+  VOPT=" -v $dataDirectory:/var/lib/data"
+fi
+
+echo Starting KB image $corpusId
+$DOCKERCMD run -d --restart=always --name="$corpusId" $VOPT -p $dbPort:5432 -p $tsPort:8089 $imageId
+unset VOPT
+# give it a moment
+echo Waiting for initialization to complete
+sleep 30
+
+echo Creating database $dbName for corpus $corpusId
+$DOCKERCMD exec -i "$corpusId" bash -s <<-EOF
+psql -U postgres --quiet -tAc "CREATE USER $dbUser PASSWORD '$dbPasswd'"
+psql -U postgres --quiet -tAc "CREATE DATABASE $dbName WITH OWNER $dbUser"
+psql -U postgres --quiet -tAc "GRANT ALL ON DATABASE $dbName TO $dbUser"
+psql -U postgres -d "$dbName" --quiet -tAc "ALTER SCHEMA public OWNER TO $dbUser"
+psql -U postgres -d "$dbName" --quiet -tAc "GRANT ALL ON SCHEMA public TO $dbUser"
+EOF
+
+echo "Docker KB instance $corpusId has been initialized and is ready for use"
+

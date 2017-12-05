@@ -97,7 +97,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 function databaseExists() {
-  r=$(psql -U "$presadmin" -h $2 -p $3 --quiet -tAc "SELECT count(*) FROM pg_catalog.pg_database WHERE datname = '$1'" 2>/dev/null)
+  r=$(psql -U "$presadmin" -h $2 -p $3 -d postgres --quiet -tAc "SELECT count(*) FROM pg_catalog.pg_database WHERE datname = '$1'" 2>/dev/null)
   [ $? -ne 0 ] && return 1
   [ "$r" -a "$r" -eq 1 ] && return 0
   return 1
@@ -118,7 +118,7 @@ function databasePopulated() {
 }
 
 function userExists() {
-  r=$(psql -U "$presadmin" -h $2 -p $3 --quiet -tAc "SELECT count(*) FROM pg_catalog.pg_user WHERE usename = '$1'" 2>/dev/null)
+  r=$(psql -U "$presadmin" -h $2 -p $3 -d postgres --quiet -tAc "SELECT count(*) FROM pg_catalog.pg_user WHERE usename = '$1'" 2>/dev/null)
   [ $? -ne 0 ] && return 1
   [ "$r" -a $r -ge 1 ] && return 0
   return 1
@@ -131,7 +131,7 @@ function passwordValid() {
 }
 
 function createUser() {
-  psql -U "$presadmin" -h "$3" -p "$4" --quiet -tAc "CREATE USER $1 PASSWORD '$2'"
+  psql -U "$presadmin" -h "$3" -p "$4" -d postgres --quiet -tAc "CREATE USER $1 PASSWORD '$2'"
   if [ $? -ne 0 ] ; then
     echo "ERROR: failed to create user."
     exit 1
@@ -209,7 +209,7 @@ else
 fi
 
 if [ $createNew -eq 0 ] ; then
-  psql -U "$presadmin" -h "${host}" -p "${port}" --quiet <<-EOF
+  psql -U "$presadmin" -h "${host}" -p "${port}" -d postgres --quiet <<-EOF
 	CREATE DATABASE $dbName WITH OWNER $username;
 	GRANT ALL ON DATABASE $dbName TO $username;
 EOF

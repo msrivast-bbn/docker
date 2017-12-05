@@ -2,11 +2,13 @@
 # Script run within the docker container to start the actual A2KD Run.
 # /input contains:
 #   /input/partitions - a file containing the number of partitions to use.
-#   /input/ddPartitions - a file containing the number of document deduplication partitions to use.
 #   /input/config.xml - a file containing the A2KD Configuration file.
 #   /input/spark.conf - a file containing the Spark properties file.
 #   /input/languages - a file containing a space-separated list of language codes
 #   /input/log4j.properties [optional] - log4j logging parameters
+#   /input/statsDir - present if gather_statistics is true. A directory to contain statistics.
+#   /input/kbReportsDir - present if generate_kb_reports is true. A directory to contain the reports.
+#   /input/kbResolverConfig - present if kb_resolver_config is defined and readable. A parameters file for the KBResolver
 # The docker container will have the following volumes:
 #   /input - mount to /tmp/input$$ containing the files listed above
 #   /output - mount to output directory
@@ -61,7 +63,6 @@ find /input/* -type f -exec chmod 664 {} \;
 find /input/* -type d -exec chmod 775 {} \;
 
 num_partitions=$(cat /input/partitions)
-num_ddPartitions=$(cat /input/ddPartitions)
 job_directory=$(cat /input/job_directory)
 
 log "a2kd preparation started"
@@ -89,24 +90,41 @@ log "uploading local input directory/ies to hdfs"
 languages=$(cat /input/languages)
 
 # copy in the input data, and then update the config file to the new location in hdfs for each language
-hdfs dfs -mkdir "$input_dir_hdfs"
+hdfs dfs -mkdir -p "$input_dir_hdfs"
 for lang in $languages; do
-  hdfs dfs -put "/${lang}" "$input_dir_hdfs"
+  hdfs dfs -put -f "/${lang}" "$input_dir_hdfs"
   # update path in shared copy of a2kd_config file
-  xmlstarlet edit --inplace --update "/config/algorithm_set[@language='$lang']/input_directory" --value "${input_dir_hdfs}/${lang}" /input/config.xml
+  xmlstarlet edit --inplace --update "/config/algorithm_set[@language='$lang']/input_directory" --value "$input_dir_hdfs/$lang" /input/config.xml
 done
 
 output_dir_hdfs="output_${job_timestamp}"
-hdfs dfs -mkdir "$output_dir_hdfs"
+hdfs dfs -mkdir -p "$output_dir_hdfs"
+
+# if the KBResolver configuration file is specified, replace it with /input/kbResolverConfig
+if [ -f /input/kbResolverConfig ]; then
+  xmlstarlet edit --inplace --update "/config/kb_resolver_config" --value "$job_directory/kbResolverConfig" /input/config.xml
+fi
+
+# if the KB Report Directory exists, set /input/kbReportsDir as the directory
+if [ -d /input/kbReportsDir ]; then
+  xmlstarlet edit --inplace --update "/config/kb_reporting_config/@kb_report_output_dir" --value "$job_directory/kbReportsDir" /input/config.xml
+fi
+
+# if the Statistics Directory exists, set /input/statsDir as the directory
+if [ -d /input/statsDir ]; then
+  xmlstarlet edit --inplace --update "/config/debug_config/@stats_directory_path" --value "$job_directory/statsDir" /input/config.xml
+fi
 
 log "running spark-submit"
 
 ${SPARK_HOME}/bin/spark-submit --verbose \
 	--class adept.e2e.driver.MainE2eDriver \
 	--properties-file /input/spark.conf \
-	${A2KD_HOME}/lib/adept-e2e.jar "${output_dir_hdfs}" ${num_partitions} ${num_ddPartitions} "${job_directory}/config.xml"
+	${A2KD_HOME}/lib/adept-e2e.jar "${output_dir_hdfs}" ${num_partitions} "${job_directory}/config.xml"
 
 log "downloading output directory from hdfs"
+log "removing any existing local directories from previous run(s)"
+rm -rf /output/"${output_dir_hdfs}"
 hdfs dfs -get "${output_dir_hdfs}" /output
 log "removing temporary hdfs directories"
 hdfs dfs -rm -r -skipTrash "${input_dir_hdfs}" "${output_dir_hdfs}"

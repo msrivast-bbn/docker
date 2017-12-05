@@ -10,33 +10,23 @@
   </parent>
   <artifactId>a2kd</artifactId>
   <name>a2kd</name>
+  <packaging>pom</packaging>
   <description>A Docker image of the Adept E2E system</description>
   <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.build.timestamp.format>yyMMdd-HHmmss-SSSS</maven.build.timestamp.format>
     <timestamp>${maven.build.timestamp}</timestamp>
+    <jar.skipIfEmpty>true</jar.skipIfEmpty>
+    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
   <dependencies>
     <dependency>
-      <groupId>com.bbn.adept</groupId>
+      <groupId>adept</groupId>
       <artifactId>adept-e2e</artifactId>
-      <version>2.7.3-SNAPSHOT</version>
-      <type>jar</type>
-    </dependency>
-    <dependency>
-      <groupId>com.bbn.adept</groupId>
-      <artifactId>adept-e2e</artifactId>
-      <version>2.7.3-SNAPSHOT</version>
-      <type>zip</type>
-      <classifier>bin</classifier>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
   <build>
-    <resources>
-      <resource>
-        <directory>${basedir}/src/main/resources</directory>
-        <filtering>true</filtering>
-      </resource>
-    </resources>
     <plugins>
       <plugin>
         <groupId>pl.project13.maven</groupId>
@@ -55,15 +45,28 @@
           <prefix>git</prefix>
           <dateFormat>yyyyMMddHHmmssZ</dateFormat>
           <dateFormatTimeZone>Etc/Zulu</dateFormatTimeZone>
-          <verbose>true</verbose>
+          <verbose>false</verbose>
           <generateGitPropertiesFile>true</generateGitPropertiesFile>
           <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
+          <skipPoms>false</skipPoms>
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <version>3.0.2</version>
         <executions>
+          <execution>
+            <id>process-resources</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>resources</goal>
+            </goals>
+            <configuration>
+              <directory>${basedir}/src/main/resources</directory>
+              <filtering>true</filtering>
+            </configuration>
+          </execution>
           <execution>
             <id>copy-rune2e</id>
             <phase>process-resources</phase>
@@ -86,15 +89,6 @@
         </executions>
       </plugin>
       <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.0.2</version>
-        <configuration>
-          <excludes>
-            <exclude>**/*</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-      <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>3.0.0</version>
         <executions>
@@ -107,8 +101,9 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>com.bbn.adept</groupId>
+                  <groupId>adept</groupId>
                   <artifactId>adept-e2e</artifactId>
+                  <version>${project.version}</version>
                   <type>jar</type>
                   <outputDirectory>${project.build.directory}/appassembler/lib</outputDirectory>
                 </artifactItem>
@@ -125,8 +120,9 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>com.bbn.adept</groupId>
+                  <groupId>adept</groupId>
                   <artifactId>adept-e2e</artifactId>
+                  <version>${project.version}</version>
                   <type>zip</type>
                   <classifier>bin</classifier>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
@@ -143,8 +139,9 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>com.bbn.adept</groupId>
+                  <groupId>adept</groupId>
                   <artifactId>adept-e2e</artifactId>
+                  <version>${project.version}</version>
                   <type>zip</type>
                   <classifier>bin</classifier>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
@@ -161,8 +158,9 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>com.bbn.adept</groupId>
+                  <groupId>adept</groupId>
                   <artifactId>adept-e2e</artifactId>
+                  <version>${project.version}</version>
                   <type>jar</type>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                   <includes>/e2e_config.template.xml,kbresolver_properties.template.xml</includes>
@@ -175,12 +173,14 @@
       <plugin>
         <groupId>io.fabric8</groupId>
         <artifactId>docker-maven-plugin</artifactId>
+        <version>0.23.0</version>
         <configuration>
           <images>
             <image>
               <name>${user.name}/${project.artifactId}:${timestamp}</name>
               <build>
                 <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
+                <filter>@</filter>
               </build>
             </image>
           </images>
@@ -210,6 +210,21 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>1.6.0</version>
         <executions>
+          <execution>
+             <id>xz-build-directory</id>
+             <phase>install</phase>
+             <goals>
+               <goal>exec</goal>
+             </goals>
+             <configuration>
+               <workingDirectory>${project.build.directory}</workingDirectory>
+               <executable>xz</executable>
+               <arguments>
+                 <argument>-z</argument>
+                 <argument>${user.name}_${project.artifactId}-${timestamp}.tar</argument> 
+               </arguments>
+             </configuration>
+           </execution>
           <!-- This is a violation of all that is Maven. We need to get these 
             into the nexus via a raw repository. The downloads for these started to become 
             unreliable, so we are locally 'caching' them. -->

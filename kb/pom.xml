@@ -10,10 +10,15 @@
   </parent>
   <artifactId>kb</artifactId>
   <name>kb</name>
+  <packaging>pom</packaging>
   <description>A Docker image with the Parliament Triple-Store AND Postgres</description>
   <properties>
     <parliament-version>2.7.10</parliament-version>
     <maven.build.timestamp.format>yyMMdd-HHmmss-SSSS</maven.build.timestamp.format>
+    <timestamp>${maven.build.timestamp}</timestamp>
+    <jar.skipIfEmpty>true</jar.skipIfEmpty>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
     <dependency>
@@ -29,9 +34,61 @@
       <resource>
         <directory>${basedir}/src/main/resources</directory>
         <filtering>true</filtering>
+        <excludes>
+          <exclude>runkb</exclude>
+        </excludes>
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.0.2</version>
+        <executions>
+          <execution>
+            <id>process-runkb</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+	      <resources>
+                <resource>
+                  <directory>${basedir}/src/main/resources</directory>
+                  <filtering>true</filtering>
+                  <includes>
+                    <include>runkb</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>pl.project13.maven</groupId>
+        <artifactId>git-commit-id-plugin</artifactId>
+        <version>2.2.3</version>
+        <executions>
+          <execution>
+            <id>get-the-git-infos</id>
+            <goals>
+              <goal>revision</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+          <prefix>git</prefix>
+          <dateFormat>yyyyMMddHHmmssZ</dateFormat>
+          <dateFormatTimeZone>Etc/Zulu</dateFormatTimeZone>
+          <verbose>false</verbose>
+          <generateGitPropertiesFile>true</generateGitPropertiesFile>
+          <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
+          <skipPoms>false</skipPoms>
+        </configuration>
+      </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>3.0.1</version>
@@ -60,12 +117,14 @@
       <plugin>
         <groupId>io.fabric8</groupId>
         <artifactId>docker-maven-plugin</artifactId>
+        <version>0.23.0</version>
         <configuration>
           <images>
             <image>
               <name>${user.name}/${project.artifactId}:${maven.build.timestamp}</name>
               <build>
                 <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
+                <filter>@</filter>
               </build>
             </image>
           </images>
@@ -89,6 +148,27 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+             <phase>install</phase>
+             <goals>
+               <goal>exec</goal>
+             </goals>
+           </execution>
+         </executions>
+         <configuration>
+           <workingDirectory>${project.build.directory}</workingDirectory>
+           <executable>xz</executable>
+           <arguments>
+             <argument>-z</argument>
+             <argument>${user.name}_${project.artifactId}.${maven.build.timestamp}.tar</argument> 
+           </arguments>
+         </configuration>
       </plugin>
     </plugins>
   </build>

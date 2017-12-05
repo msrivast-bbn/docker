@@ -1,0 +1,34 @@
+#!/bin/bash
+export PATH=/usr/pgsql-9.6/bin/:$PATH
+export PGDATA=/var/lib/data/pgsql/data
+
+function stop() {
+  export PGCTLTIMEOUT=120
+  pg_ctl stop 
+  if [ $? -ne 0 ]; then
+    printf "WARNING: postgres smart stop failed!\n"
+    pg_ctl stop -m fast 
+    if [ $? -ne 0 ]; then
+      printf "WARNING: postgres fast stop failed!\n"
+      pg_ctl stop -m immediate 
+      if [ $? -ne 0 ]; then
+        printf "ERROR: could not stop postgres!\n"
+      fi
+    fi
+  fi
+}
+
+trap stop TERM KILL 
+
+printf "Starting PostgreSQL\n"
+pg_ctl start -w 
+
+printf "PostgreSQL Started\n"
+
+while [ -f /var/run/postgresql/.s.PGSQL.5432.lock ]; do
+  sleep 10 &
+  wait $!
+done
+
+printf "PostgreSQL Exited!\n"
+

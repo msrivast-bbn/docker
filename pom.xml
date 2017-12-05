@@ -3,15 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.bbn.adept</groupId>
   <artifactId>deft-docker</artifactId>
-  <url>http://www.deftdocs.bbn.com/SitePages/Home.aspx</url>
   <version>2.7.3-SNAPSHOT</version>
+  <url>http://www.deftdocs.bbn.com/SitePages/Home.aspx</url>
   <packaging>pom</packaging>
   <name>deft-docker</name>
   <description>Docker Builds for Deep Exploration and Filtering of Text</description>
-  <organization>
-    <name>Raytheon BBN Technologies</name>
-    <url>http://www.bbn.com</url>
-  </organization>
   <!-- Any value which applies to multiple projects and which might change should be defined here project-wide. -->
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
@@ -23,6 +19,10 @@
     <defaultInputLanguage>en</defaultInputLanguage>
     <docker.registry>deft-docker-01.bbn.com:5000/</docker.registry>
   </properties>
+  <organization>
+    <name>Raytheon BBN Technologies</name>
+    <url>http://www.bbn.com</url>
+  </organization>
   <distributionManagement>
     <repository>
       <id>DEFTReleases</id>
@@ -66,9 +66,8 @@
     </repository>
   </repositories>
   <scm>
-    <url>ssh://www.deftware.bbn.com:7999/adept/deft.git</url>
-    <connection>scm:git:ssh://www.deftware.bbn.com:7999/adept/deft.git</connection>
-    <developerConnection>scm:git:ssh://www.deftware.bbn.com:7999/adept/deft.git</developerConnection>
+    <developerConnection>scm:git:ssh://www.deftware.bbn.com:7999/adept/adept-e2e.git</developerConnection>
+    <tag>HEAD</tag>
   </scm>
   <modules>
     <module>kb</module>

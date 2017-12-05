@@ -42,8 +42,8 @@ RUN apt-get update -y && \
     chmod 755 ${A2KD_HOME} ${A2KD_HOME}/bin/* 
 
 EXPOSE 4040
- 
-LABEL version=${project.version} timestamp=${maven.build.timestamp}
+
+LABEL version=@project.version@ timestamp=@maven.build.timestamp@
 
 ENTRYPOINT ["/entrypoint.sh"]
 

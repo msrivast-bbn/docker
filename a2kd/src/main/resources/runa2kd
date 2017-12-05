@@ -1,8 +1,8 @@
 #!/bin/bash
-set -e
-umask 002
+
 #
 # Script run on the dockerd host to start the A2KD Container.
+umask 002
 
 function printLicense {
   cat <<-"EOF"
@@ -28,91 +28,290 @@ see THIRD-PARTY.txt for a list of the libraries and their licenses.
 EOF
 }
 
-function version {
-echo
-printf "Version:           %s\n" ${git.build.version}
-printf "branch:            %s\n" ${git.branch}
-printf "tags:              %s\n" ${git.tags}
-printf "commit time:       %s\n" ${git.commit.time}
-printf "build time:        %s\n" ${git.build.time}
-printf "closest tag count: %s\n" ${git.closest.tag.commit.count}
-printf "closest tag:       %s\n" ${git.closest.tag.name}
-printf "git commit:        %s\n" ${git.commit.id.abbrev}
-printf "dirty:             %s\n" ${git.dirty}
-echo
-exit 0
-}
-
-function help {
-cat <<EOF
-a2kd
-
-$1 <output directory path> <num_partitions> <num_dedup_partitions> <a2kd_config file> <spark settings file> <shared_top>
-
-The $1 program executes an A2KD analysis over the provided corpus using the
-parameters specified on the command line and in the configuration file.
-
-This program requires access to the HADOOP configuration
-directory in order to function properly.
-
-If the standard environment variable HADOOP_CONF_DIR is not 
-defined, the program will look for the hadoop configuration directory at 
-$HOME/hadoop/conf, then /etc/hadoop/conf. If these directories cannot be found
-and the environment variable is not defined, the program will fail.
-
- If you have this directory in a non-standard location, the
-environment variables can easily be defined on the command line:
-
-HADOOP_CONF_DIR=/share/hadoop/conf $1 output 5 5 a2kd_config.xml spark.conf /nfs/gold-04/u40
-
-You MAY specify a Spark configuration directory to pick up the default Spark setting for
-your cluster. Use the SPARK_CONF_DIR environment variable for this purpose.
-
-An image with a different version than latest may be used in place of deft/a2kd:latest
-by specifying the version with the A2KD_VERSION environment variable. For instance,
-
-A2KD_VERSION=170803-201933-0233 runa2kd ...
-
-will attempt to use the deft/a2kd:170803-201933-0233 image from your repository.
-
-An image with a completely different name or in a repository other then your local
-repository can be used as well. Simply set the DEFTIMAGE environment variable to
-the name of your image:
-
-DEFTIMAGE=deft-images-host:5000/deft/a2kd:latest runa2kd ...
-
-If both DEFTIMAGE and A2KD_VERSION are set, A2KD_VERSION is ignored.
-
-The parameters that must be defined in the configuration file are documented therein.
-
-The spark_config file contents are documented in 
-https://spark.apache.org/docs/2.1.0/configuration.html#loading-default-configurations.
-See the Spark Documentation for information on the parameters that can be specified.
-
-The path described by shared_top is the top-level directory of a directory tree 
-whose path is common to all nodes in the cluster.  
-EOF
-[ $# -eq 2 ] && exit $2
-}
-
-function errexit {
+errexit() {
    ( >&2 echo "$1")
    logger -p user.error "$1"
    rm -rf /tmp/input$$
    exit 1
 }
 
-# check for help
-if [ $# -eq 0 -o "$1" = "-h" -o "$1" = "--help" ]; then
-  help $(basename $0) 0
+version() {
+  printf "\n----------\nruna2kd version information\n----------\n"
+  printf "Version:           %s\n" ${git.build.version}
+  printf "branch:            %s\n" ${git.branch}
+  printf "tags:              %s\n" ${git.tags}
+  printf "commit time:       %s\n" ${git.commit.time}
+  printf "build time:        %s\n" ${git.build.time}
+  printf "closest tag count: %s\n" ${git.closest.tag.commit.count}
+  printf "closest tag:       %s\n" ${git.closest.tag.name}
+  printf "git commit:        %s\n" ${git.commit.id.abbrev}
+  printf "dirty:             %s\n" ${git.dirty}
+  echo
+  exit 0
+}
+
+usage() {
+if [ x"${1}" = x ]; then
+  cmd=runa2kd
+else
+  cmd=$(basename "$1")
 fi
-if [ "$1" = "-v" -o "$1" = "--version" ]; then
-  version
+cat <<EOF
+
+Usage: $cmd -c <config> -t <shared-top> -o <output-dir> -s <spark-props> [OPTION]...
+
+where:
+    <config> is the path of the a2kd xml configuration file
+    <shared-top> is the path to a shared directory accessible to all hosts in the cluster
+    <output-dir> is a directory under which intermediate and output files will be placed.
+    <spark-props> is the path of the Spark properties file
+
+Options:
+   -p  # of partitions to use
+   -S  path to a Spark default configuration directory
+   -H  path to the cluster HADOOP configuration directory
+
+
+EOF
+}
+
+help() {
+if [ x"${1}" = x ]; then
+  cmd=runa2kd
+else
+  cmd=$(basename "$1")
+fi
+cat <<EOF
+
+NAME
+    $cmd - process a document corpus through a DEFT pipeline
+
+SYNOPSIS
+    $cmd --config config --shared-top <path> --output-directory <output directory path> --spark-props <spark properties file> [OPTION]... <
+
+DESCRIPTION
+    Process the provided corpus of documents and load the results into a knowledgebase for 
+    viewing and further analysis. Place all output into the specified output directory, which
+    must exist and be writable by the invoking user when this command is invoked.
+
+    The options are as follows:
+
+    -c <path>
+    --config <path>     Required. Path to the A2KD configuration xml file. No default.
+
+    -t <path>
+    --shared-top <path> Required. A path common to all hosts in the cluster under which shared
+                        directory trees and files will reside. The $cmd script will create a
+                        child directory using the login name of the invoking user under this
+                        directory for the storage of intermediate results and log information.
+                        If you are storing model files in a central location and sharing them
+                        across the cluster, they should reside under this directory and the
+                        classpath specified in the spark properties file should reference the
+                        appropriate directories under this path.
+                        No default.
+
+    -o <path>
+     output-dir <path>
+                        Required. A path on the local host under which the output of the runa2kd
+                        will be placed. The script will create a child directory under this path
+                        that will be named using a timestamp value so that it can be easily identified.
+                        This child directory will include intermediate checkpoints, debug logs, 
+                        and other files related to the run.
+
+    -s <path>
+    --spark-props <path>
+                        Required. The path to a spark properties file. Any properties specified in
+                        this file will override the cluster specific settings. Properties not specified
+                        will be obtained from the default settings in the Spark configuration 
+                        directory. If a property is not defined in either location, a hard-coded
+                        default value will be used.
+
+    -p <n>
+    --partitions <n>    Optional. The number of partitions to use while processing the corpus 
+                        through the pipeline. If not specified, the script will set
+                        the number of partitions to one half of the number of documents in the
+                        largest document corpus specified in the A2KD configuration file.
+
+    -S <path>
+    --spark-conf-dir <path>   Optional. The path to the Spark 2 configuration directory for the target
+                        cluster. This directory contains default cluster-specific configuration settings
+                        to be used by Spark programs on that cluster. If not specified, $cmd will
+                        use the value of the \$SPARK_CONF_DIR environment variable if set to identify
+                        a Spark 2 settings directory. If the \$SPARK_CONF_DIR environment variable 
+                        is not set and the path to a settings directory is not set on the command 
+                        line, the hard-coded Spark default settings will be used.
+
+    -H <path>
+    --hadoop-conf-dir <path>  Optional. The path to the HADOOP configuration directory for the target
+                        cluster. This directory contains default cluster-specific configuration settings
+                        for the HDFS and HADOOP systems, including the locations of the various services
+                        that make up the cluster. If not specified, $cmd will use the value of 
+                        the \$HADOOP_CONF_DIR environment variable to locate the HADOOP configuration
+                        directory. If neither specified on the command line nor the \$HADOOP_CONF_DIR
+                        environment variable, $cmd will attempt to locate the HADOOP configuration directory
+                        at \$HADOOP_HOME/etc/conf and then /etc/hadoop. If $cmd cannot locate a HADOOP
+                        configuration directory after this search, the command will fail.
+
+EXAMPLES
+Process the documents as specified by a2kdConfig.xml and place the results in 
+the directory 'output'. Use the default Spark and HADOOP settings from 
+/etc/hadoop/conf:
+
+\$> $cmd -c a2kdConfig.xml -t /nfs/shared -o output
+
+Process the documents as specified by a2kdConfig.xml using the provided Spark 
+and HADOOP settings and place the results in a new directory under the directory 'output':
+
+\$> $cmd --config a2kdConfig.xml --shared-top /nfs/shared --spark-props spark.conf --spark-conf-dir \$HOME/spark/cluster1/conf --hadoop-conf-dir \$HOME/hadoop/cluster1/conf --output-dir output
+
+The same command as above, but use environment variables to define the two 
+configuration directories:
+
+\$> export HADOOP_CONF_DIR=\$HOME/hadoop/cluster1/conf
+\$> export SPARK_CONF_DIR=\$HOME/spark/cluster1/conf
+\$> $cmd --config a2kdConfig.xml --shared-top /nfs/shared --spark-props spark.conf --output-dir output
+
+EOF
+}
+
+# $1 path
+# type (fdh)
+# mode (rw)
+# option
+checkFSO() {
+  if [ x"${1}" = x ]; then
+    errors+="    path \"$1\" specified for $4 is empty\n" 
+  fi
+  if [ ! -e "$1" ] ; then
+    errors+="    path \"$1\" specified for $4 does not exist\n"
+    return
+  fi
+  if [ $2 = f -a ! -f "$1" ] ; then
+    errors+="    path \"$1\" specified for $4 is not a file\n"
+  fi
+  if [ $2 = d -a ! -d "$1" ] ; then
+    errors+="    path \"$1\" specified for $4 is not a directory\n"
+  fi
+  case "$3" in
+    *r* ) if [ ! -r "$1" ]; then
+        errors+="    path \"$1\" specified for $4 is not readable\n"
+      fi;;&
+    *w* ) if [ ! -w "$1" ]; then
+        errors+="    path \"$1\" specified for $4 is not writable\n"
+      fi;;
+    *x* ) if [ ! -x "$1" ]; then
+        errors+="    path \"$1\" specified for $4 is not searchable\n"
+      fi;;
+  esac
+}
+
+if [ $# = 0 ]; then
+  usage
+  exit 0
 fi
 
-if [ $# -ne 6 ]; then
-  ( >&2 echo "\nERROR: incorrect number of parameters: $#")
-  help $(basename $0) 1
+# read the options
+
+TEMP=`getopt -o o:p:c:s:t:S:H: --long output-dir:,partitions:,config:,spark-props:,spark-conf-dir:,hadoop-conf-dir:,help,version -n 'runa2kd' -- "$@"`
+if [ $? -ne 0 ]; then
+  usage
+  exit 1
+fi
+eval set -- "$TEMP"
+
+unset outputDirectory partitions a2kdConfiguration sparkProperties sharedTop sparkConfDir hadoopConfDir kbResolverConfig statsDir kbReportDir
+oopt=0 popt=0 copt=0 sopt=0 topt=0 Sopt=0 Hopt=0
+
+while true ; do
+  case "$1" in
+    -o|--output-dir)
+      ((oopt++))
+      case "$2" in
+        "") shift 2;;
+        *) outputDirectory="$2"; shift 2;;
+      esac ;;
+    -p|--partitions)
+      ((popt++))
+      case "$2" in
+        "") shift 2;;
+        *) partitions="$2"; shift 2;;
+      esac ;;
+    -c|--config)
+      ((copt++))
+      case "$2" in
+        "") shift 2;;
+        *) a2kdConfiguration="$2"; shift 2;;
+      esac ;;
+    -s|--spark-props)
+      ((sopt++))
+      case "$2" in
+        "") shift 2;;
+        *) sparkProperties="$2"; shift 2;;
+      esac ;;
+    -t|--shared-top)
+      ((topt++))
+      case "$2" in
+        "") shift 2;;
+        *) sharedTop="$2"; shift 2;;
+      esac ;;
+    -S|--spark-conf-dir)
+      ((Sopt++))
+      case "$2" in
+        "") shift 2;;
+        *) sparkConfDir="$2"; shift 2;;
+      esac ;;
+    -H|--hadoop-conf-dir)
+      ((Hopt++))
+      case "$2" in
+        "") shift 2;;
+        *) hadoopConfDir="$2"; shift 2;;
+      esac ;;
+    --help)
+      help "$0"
+      exit 0
+      ;;
+    --version)
+      version
+      exit 0
+      ;;
+    --) shift ; break ;;
+    -*) printf "Error: Unknown option %s\n" "$1"; usage; exit 1 ;;
+    *) printf "Error: invalid argument %s\n" "$1"; usage; exit 1 ;;
+  esac
+done
+
+[ x"${outputDirectory}" = x ] && errors=$(printf "%s    no/empty value specified for output directory (-o)\n" "$errors" )
+[ x"${a2kdConfiguration}" = x ] && errors=$(printf "%s    no/empty value specified for a2kd configuration file (-c)\n" "$errors" )
+[ x"${sharedTop}" = x ] && errors=$(printf "%s    no/empty value specified for shared-top directory (-t)\n" "$errors" )
+
+# output directory - create if not there
+if [ ! -e "$outputDirectory" ] ; then
+  mkdir -p "$outputDirectory"
+  chmod 775 "$outputDirectory"
+fi
+
+checkFSO "$outputDirectory" d rw "output directory"
+checkFSO "$sharedTop" d rw "shared top"
+checkFSO "$a2kdConfiguration" f r "a2kd config"
+checkFSO "$sparkProperties" f r "spark props"
+
+if [ x"${partitions}" != x ] ; then
+  if ! [[ $partitions =~ ^[+-]?[0-9]+$ ]] ; then
+    errors+="    the partitions argument must be an integer\n"
+  fi
+fi
+
+if [ $Sopt -gt 0 ]; then
+  checkFSO "$sparkConfDir" d r "spark conf directory"
+fi
+if [ $Hopt -gt 0 ]; then
+  checkFSO "$hadoopConfDir" d r "HADOOP conf directory"
+fi
+
+if [ ${#errors} -gt 0 ]; then
+  printf "\nERROR:\n$errors"
+  usage
+  exit 1
 fi
 
 # check for xmllint
@@ -121,6 +320,7 @@ if [ x"$DOCKER_CMD" = x ]; then
   hash docker 2>/dev/null || { echo >&2 "I require docker but it's not installed or in your PATH.  Aborting."; exit 1; }
 fi
 
+printf "========================================\n%s Starting run\n" "$(date)"
 job_timestamp=$(date +%y%m%d%H%M%S)
 echo "The UTC job_timestamp/id of this job is $job_timestamp"
 
@@ -130,40 +330,8 @@ UN="$(echo -n "$(id -un)" | tr "[:space:]" "_")"
 GI="$(id -g)"
 GN="$(echo -n "$(id -gn)" | tr "[:space:]" "_")"
 
-# $1 output directory - create if not there
-if [ ! -e "${1}" ] ; then
-  mkdir -p "${1}"
-  chmod 775 "${1}"
-fi
-[ -d "${1}" -a -w "${1}" ] || errexit "ERROR: path \"$1\" is not a directory or is not writable"
-output_dir=$(readlink -f "${1}")
- 
-[[ "$2" =~ ^[0-9]+$ ]] || errexit "ERROR: value \"$2\" specified for number of partitions is not an integer"
-num_partitions=$2 
-
-[[ "$3" =~ ^[0-9]+$ ]] || errexit "ERROR: value \"$3\" specified for number of deduplication partitions is not an integer"
-num_dd_partitions=$3
-
-# $4 a2kd config file
-if [ ! -f "${4}" -o ! -r "${4}" ] ; then
-  errexit "ERROR: A2KD Configuration File \"${4}\" does not exist, is not a file, or is not readable"
-fi
-a2kd_config="$4"
-
-# $5 spark config file
-if [ ! -f "${5}" -o ! -r "${5}" ] ; then
-  errexit "ERROR: Spark Configuration File \"${5}\" does not exist, is not a file, or is not readable"
-fi
-spark_config="$5"
-
-# $6 shared directory
-[ -e "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" does not exist"
-[ -d "${6}" ] || errexit "ERROR: Shared Directory path \"${6}\" is not a directory"
-[ -r "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" is not readable"
-[ -x "${6}" ] || errexit "ERROR: Shared Directory \"${6}\" is not searchable"
-shared_top="$6"
 # create per-user shared directory if needed
-shared_directory="${6}/$(id -un)"
+shared_directory="${sharedTop}/$(id -un)"
 if [ ! -d "$shared_directory" ]; then
   mkdir -p "$shared_directory" || errexit "ERROR: Could not create User Shared Directory $shared_directory"
 fi
@@ -173,45 +341,55 @@ job_directory="${shared_directory}/job_${job_timestamp}"
 mkdir -p "$job_directory" || errexit "ERROR: Could not create Job Directory $job_directory"
 
 # populate the job directory with our input info
-echo "$num_partitions" >"${job_directory}/partitions"
-echo "$num_dd_partitions" >"${job_directory}/ddPartitions"
+echo "$0 $@" >"${job_directory}/command"
 echo "$job_directory" >"${job_directory}/job_directory"
 echo "$job_timestamp" >"${job_directory}/job_timestamp"
-cp "$a2kd_config" "${job_directory}/config.xml"
-cp "$spark_config" "${job_directory}/spark.conf"
-spark_config="${job_directory}/spark.conf"
+cp "$a2kdConfiguration" "${job_directory}/config.xml"
+a2kdConfiguration="${job_directory}/config.xml"
+cp "$sparkProperties" "${job_directory}/spark.conf"
+sparkProperties="${job_directory}/spark.conf"
 
 # Get the language(s) and their input directories so we can mount them in the Docker container
-dirs=$(echo 'cat /config/algorithm_set/input_directory/text()' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)")
+dirs=$(echo 'cat /config/algorithm_set/input_directory/text()' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)")
 input_dirs=( $dirs )
-langs=$(echo 'cat /config/algorithm_set/@language' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -e 's/^[^\"]*\"//' -e 's/\"//g')
+langs=$(echo 'cat /config/algorithm_set/@language' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)" | sed -e 's/^[^\"]*\"//' -e 's/\"//g')
 languages=( $langs )
 echo $langs >"${job_directory}/languages"
 
-[ ${languages:-none} = none ] && errexit "ERROR: no input languages specified in the configuration file"
+[ ${languages:-none} = none ] && errexit "ERROR: no input language specified in the configuration file"
 [ ${input_dirs:-none} = none ] && errexit "ERROR: no input directory specified in the configuration file"
 rm -f "${job_directory}/mounts"
 cnt=0
+max=0
 for dir in $dirs; do
-  [ -e "${dir}" ] ||  errexit "ERROR: input directory \"${dir}\" for language \"${languages[$cnt]}\" does not exist"
-  [ -d "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" exists but is not a directory"
-  [ -r "${dir}" ] ||  errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" exists but is not readable"
+  checkFSO "$dir" d r "input directory for language \"${languages[$cnt]}\""
   [ "$(ls -A ${dir})" ] || errexit "ERROR: input directory path \"${dir}\" for language \"${languages[$cnt]}\" is empty - no input files found"
   # This is building VOLUME arguments for the docker run command below
   printf -- '-v %s:/%s ' "$(readlink -f "$dir")" "${languages[$cnt]}" >>"${job_directory}/mounts"
+  num=$(find "$dir" -follow -type f | wc -l)
+  [ $? -eq 0 -a $num -gt $max ] && max=$num
   cnt=$(( $cnt + 1 ))
 done
+[ $max -gt 1 ] && max=$(( max / 2 ))
+[ "x${partitions}" = x ] && partitions=$max
+if [ "$partitions" -lt 1 ] ; then
+  partitions=1
+  echo Somehow partitions was less than One. Forced it to One.
+fi
+echo setting partitions to $partitions
+echo "$partitions" >"${job_directory}/partitions"
 
-chmod ug=rw,o=r ${job_directory}/*
+chmod 664 ${job_directory}/*
 
 [ -f log4j.properties ] && cp log4j.properties ${job_directory}
 
 # Get corpus_id to use as docker container name
-corpus_id=$(echo 'cat /config/kb_config/@corpus_id' | xmllint --shell "$a2kd_config" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+corpus_id=$(echo 'cat /config/kb_config/@corpus_id' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
 
 # Check for or set HADOOP_CONF_DIR
+[ $Hopt -gt 0 ] && HADOOP_CONF_DIR="$hadoopConfDir"
 if [  x"$HADOOP_CONF_DIR" = x ] ; then
-  for HCD in /etc/hadoop/conf ~/hadoop/conf /var/lib/hadoop/conf; do
+  for HCD in ~/hadoop/conf /etc/hadoop/conf /var/lib/hadoop/conf; do
     if [ -d $HCD -a -r $HCD ]; then
       HADOOP_CONF_DIR="$HCD"
       break
@@ -230,6 +408,7 @@ fi
 [ -r "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR $HADOOP_CONF_DIR found but is not readable"
 [ -x "$HADOOP_CONF_DIR" ] || errexit "ERROR: HADOOP_CONF_DIR $HADOOP_CONF_DIR found but is not searchable"
 
+[ $Sopt -gt 0 ] && SPARK_CONF_DIR="$sparkConfDir"
 if [ x"$SPARK_CONF_DIR" != x ] ; then
   [ -e "$SPARK_CONF_DIR" ] || errexit "ERROR: SPARK_CONF_DIR $SPARK_CONF_DIR does not exist"
   [ -d "$SPARK_CONF_DIR" ] || errexit "ERROR: SPARK_CONF_DIR $SPARK_CONF_DIR is not a directory"
@@ -238,12 +417,12 @@ if [ x"$SPARK_CONF_DIR" != x ] ; then
 fi
 # Fixup the class path iff necessary
 # Extract the classpath from the spark configuration file
-SCP=$(awk '/spark.driver.extraClassPath/ {print $2}' "${spark_config}" )
+SCP=$(awk '/spark.driver.extraClassPath/ {print $2}' "${sparkProperties}" )
 if [ "x$SCP" = x ]; then
-  SCP=$(awk '/spark.executor.extraClassPath/ {print $2}' "${spark_config}" )
+  SCP=$(awk '/spark.executor.extraClassPath/ {print $2}' "${sparkProperties}" )
 fi
 if [ "x$SCP" = x ]; then
-  SCP=$(awk '/extraClassPath/ {print $2}' "${spark_config}" )
+  SCP=$(awk '/extraClassPath/ {print $2}' "${sparkProperties}" )
 fi
 if [ "x$SCP" = x ]; then
   echo "ERROR: ${0}: extraClassPath definition not found in spark configuration"
@@ -256,12 +435,13 @@ dirs=$(echo ${SCP:-x} | tr ':' ' ')
 # convert to an array
 for dir in $dirs; do
   dir=${dir//\/\*/}
+  # skip specific jars included in classpath
   [ ${dir: -4} == ".jar" ] && continue
-  [ -e "$dir" ] || errexit "ERROR: path \"$dir\" in spark classpath does not exist"
-  [ -d "$dir" ] || errexit "ERROR: path \"$dir\" in spark classpath is not a directory"
+  # we are only interested in directories
+  [ -d "$dir" ] || continue
   [ -r "$dir" ] || errexit "ERROR: directory \"$dir\" in spark classpath is not readable"
   [ -x "$dir" ] || errexit "ERROR: directory \"$dir\" in spark classpath is not searchable"
-  # The first must be our CLASSPATH_TOP with a following asterisk
+  # The first must be our CLASSPATH_TOP with a following asterisk (we stripped that off above)
   if [ -d "${dir}/com/bbn/serif" ]; then
     CLASSPATH_TOP="$(dirname $dir)"
   fi
@@ -280,25 +460,82 @@ if [ "${CLASSPATH_TOP:-x}" != x ]; then
     targetFile="${first}/$targetFile"
     sed -e "s!\$CURDIR!${first}!g" -e "s!\$CLASSPATH_TOP!$CLASSPATH_TOP!g" $fileToProcess >$targetFile
   done
-  if grep -qF spark.driver.extraClassPath "${spark_config}" ; then
-    sed -i -e 's!^\s*\(spark.driver.extraClassPath\s*\)\(\w*\)!\1'"$first"':\2!' "${spark_config}"
+  if grep -qF spark.driver.extraClassPath "${sparkProperties}" ; then
+    sed -i -e 's!^\s*\(spark.driver.extraClassPath\s*\)\(\w*\)!\1'"$first"':\2!' "${sparkProperties}"
   else
-    echo "spark.driver.extraClassPath   ${first}:${SCP}" >> "${spark_config}"
+    echo "spark.driver.extraClassPath   ${first}:${SCP}" >> "${sparkProperties}"
   fi
-  if grep -qF spark.executor.extraClassPath "${spark_config}" ; then
-    sed -i -e 's!^\s*\(spark.executor.extraClassPath\s*\)\(\w*\)!\1'"$first"':\2!' "${spark_config}"
+  if grep -qF spark.executor.extraClassPath "${sparkProperties}" ; then
+    sed -i -e 's!^\s*\(spark.executor.extraClassPath\s*\)\(\w*\)!\1'"$first"':\2!' "${sparkProperties}"
   else
-    echo "spark.executor.extraClassPath ${first}:${SCP}" >> "${spark_config}"
+    echo "spark.executor.extraClassPath ${first}:${SCP}" >> "${sparkProperties}"
   fi
 fi
 # set files up if log4j.properties is present
-if ! grep -F log4j.properties  "${spark_config}" 2>&1 1>/dev/null ; then
+if ! grep -F log4j.properties  "${sparkProperties}" 2>&1 1>/dev/null ; then
   if [ -f "${job_directory}/log4j.properties" ]; then
-    cat >> "${spark_config}" <<EOF
+    cat >> "${sparkProperties}" <<EOF
 spark.executor.extraJavaOptions -Dlog4j.configuration="${job_directory}/log4j.properties"
 spark.driver.extraJavaOptions   -Dlog4j.configuration="${job_directory}/log4j.properties"
 EOF
   fi
+fi
+
+# Set up stats dir iff gather_statistics is true. Note that if true, stats will always be generated into job_directory.
+gatherStats=$(echo 'cat /config/debug_config/@gather_statistics' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+if [ "x${gatherStats}" = xtrue -o "x${gatherStats}" = xt -o "x${gatherStats}" = x1 ]; then
+  statsDir=$(echo 'cat /config/debug_config/@stats_directory_path' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+  echo "$statsDir" >"${job_directory}/stats_dir_path"
+  if [ "x${statsDir}" != x -a ! -d "$statsDir" ]; then
+    mkdir -p "$statsDir"
+    if [ $? -ne 0 ]; then
+      printf "\nERROR: Could not create Statistics Output Directory specified in $a2kdConfiguration"
+      exit 1
+    fi
+  fi
+  unset errors
+  [ "x${statsDir}" = x ] || checkFSO "$statsDir" d rwx "Statistics Output Directory"
+  if [ ${#errors} -gt 0 ]; then
+    printf "\nERROR: Problem with Statistics Output Directory path specified in $a2kdConfiguration:\n"
+    printf "%s\n\n" "$errors"
+    exit 1
+  fi
+  mkdir "${job_directory}/statsDir"
+fi
+
+# Set up kb_report dir iff generate_kb_reports is true. Note that if true, reports will always be generated into job_directory.
+generateKBReports=$(echo 'cat /config/kb_reporting_config/@generate_kb_reports' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+if [ "x${generateKBReports}" = xtrue -o "x${generateKBReports}" = xt -o "x${generateKBReports}" = x1 ]; then
+  kbReportsDir=$(echo 'cat /config/kb_reporting_config/@kb_report_output_dir' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)" | sed -n 's/[^\"]*\"\([^\"]*\)\"[^\"]*/\1/gp')
+  echo "$kbReportsDir" >"${job_directory}/kbReport_dir_path"
+  if [ "x${kbReportsDir}" != x -a ! -d "$kbReportsDir" ]; then
+    mkdir -p "$kbReportsDir"
+    if [ $? -ne 0 ]; then
+      printf "\nERROR: Could not create KB Report Output Directory specified in $a2kdConfiguration"
+      exit 1
+    fi
+  fi
+  unset errors
+  [ "x${kbReportsDir}" = x ] || checkFSO "$kbReportsDir" d rwx "KB Report Output Directory"
+  if [ ${#errors} -gt 0 ]; then
+    printf "\nERROR: Problem with KB Report Output Directory path specified in $a2kdConfiguration:\n"
+    printf "%s\n\n" "$errors"
+    exit 1
+  fi
+  mkdir "${job_directory}/kbReportsDir"
+fi
+
+# Get kbresolver properties file iff defined
+kbResolverConfig=$(echo 'cat /config/kb_resolver_config/text()' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)")
+if [ "x${kbResolverConfig}" != x ]; then
+  unset errors
+  [ "x${kbResolverConfig}" = x ] || checkFSO "$kbResolverConfig" f r "KB Resolver Configuration File"
+  if [ ${#errors} -gt 0 ]; then
+    printf "\nERROR: Problem with KB KB Resolver Configuration File path specified in $a2kdConfiguration:\n"
+    printf "%s\n\n" "$errors"
+    exit 1
+  fi
+  cp "${kbResolverConfig}" "${job_directory}/kbResolverConfig"
 fi
 
 myPort=4040
@@ -313,10 +550,13 @@ echo starting Docker container with port $myPort exposed
 # Next Phase - start the container and continue processing
 # job_directory contains:
 #   $job_directory/partitions   - a file containing the number of partitions to use.
-#   $job_directory/ddPartitions - a file containing the number of document deduplication partitions to use.
 #   $job_directory/config.xml   - a file containing the A2KD Configuration file.
 #   $job_directory/spark.conf   - a file containing the Spark properties file.
 #   $job_directory/languages    - a file containing a space-separated list of language codes
+#   $job_directory/statsDir     - present if gather_statistics is true. A directory to contain statistics.
+#   $job_directory/kbReportsDir - present if generate_kb_reports is true. A directory to contain the reports.
+#   $job_directory/kbResolverConfig - present if kb_resolver_config is defined and readable. A parameters file for the KBResolver
+
 # The docker container will have the following volumes:
 #   /input - mount to $job_directory containing the files listed above
 #   /output - mount to output directory
@@ -347,19 +587,34 @@ fi
 
 echo "Running docker image ${DEFTA2KD}" 
 
+outputDirectory="$(readlink -f $outputDirectory)"
+SCD=""
+[ "x${SPARK_CONF_DIR}" = x ] || SCD="-v $SPARK_CONF_DIR:/spark"
 ${DOCKER_CMD:-docker} run -it --rm --name "$UN-$corpus_id" \
   -e LOCAL_USER_ID=$UI \
   -e LOCAL_USER_NAME="$UN" \
   -e LOCAL_GROUP_ID=$GI \
   -e LOCAL_GROUP_NAME="$GN" \
-  -e shared_top="$shared_top" \
+  -e shared_top="$sharedTop" \
   -e job_timestamp="$job_timestamp" \
   -e job_directory="$job_directory" \
   -v $job_directory:/input \
-  -v $shared_top:/sharedTop \
-  -v $output_dir:/output \
-  -v $HADOOP_CONF_DIR:/hadoop \
+  -v $sharedTop:/sharedTop \
+  -v $outputDirectory:/output \
+  -v $HADOOP_CONF_DIR:/hadoop $SCD \
   $(cat ${job_directory}/mounts) \
   -p $myPort:4040 \
   ${DEFTA2KD} a2kd.sh
+
+printf "========================\n%s: Run complete. Cleaning up\n" "$(date)"
+if [ -d "${job_directory}/kbReportsDir" -a "x${kbReportsDir}" != x ]; then
+  echo "Copying out KB Report"
+  (cd "${job_directory}/kbReportsDir"; tar -cf - . ) | tar -C "${kbReportsDir}" -xf -
+  echo "KB Report copied"
+fi
+if [ -d "${job_directory}/statsDir" -a "x${statsDir}" != x ]; then
+  echo "Copying out Statistics"
+  (cd "${job_directory}/statsDir"; tar -cf - . ) | tar -C "${statsDir}" -xf -
+  echo "Statistics copied"
+fi
 
