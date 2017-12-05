@@ -52,14 +52,6 @@
       <filtered>true</filtered>
     </file>
     <file>
-      <source>${project.build.outputDirectory}/kbresolver_properties.template.xml</source>
-      <outputDirectory>conf</outputDirectory>
-      <destName>kbresolver_properties.template.xml</destName>
-      <fileMode>444</fileMode>
-      <lineEnding>unix</lineEnding>
-      <filtered>true</filtered>
-    </file>
-    <file>
       <source>src/main/resources/KB.xml</source>
       <outputDirectory>conf</outputDirectory>
       <fileMode>444</fileMode>
