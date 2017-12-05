@@ -30,21 +30,31 @@
   </dependencies>
   <!-- docker run -it -p xxxx:8089 -p xxxx:5432 deft/kb -->
   <build>
-    <resources>
-      <resource>
-        <directory>${basedir}/src/main/resources</directory>
-        <filtering>true</filtering>
-        <excludes>
-          <exclude>runkb</exclude>
-        </excludes>
-      </resource>
-    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <version>3.0.2</version>
         <executions>
+          <execution>
+            <id>process-resources</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+	      <resources>
+                <resource>
+                  <directory>${basedir}/src/main/resources</directory>
+                  <filtering>true</filtering>
+                  <excludes>
+                    <include>runkb</include>
+                  </excludes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
           <execution>
             <id>process-runkb</id>
             <phase>process-resources</phase>
