@@ -50,7 +50,6 @@
                 <artifactItem>
                   <groupId>com.bbn</groupId>
                   <artifactId>parliamentQS</artifactId>
-                  <version>${project.version}</version>
                   <type>zip</type>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                 </artifactItem>
