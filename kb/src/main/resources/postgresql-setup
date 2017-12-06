@@ -182,7 +182,7 @@ initdb(){
 
 if [ -z "$POSTGRES_PASSWORD" -a ! -f ~/.pgpass ]; then
   POSTGRES_PASSWORD_FILE=~/.pgpass
-  export $POSTGRES_PASSWORD_FILE
+  export POSTGRES_PASSWORD_FILE
   openssl rand -base64 16 >$POSTGRES_PASSWORD_FILE
   chmod 400 $POSTGRES_PASSWORD_FILE
 fi
