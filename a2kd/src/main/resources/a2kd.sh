@@ -59,8 +59,7 @@ if [[ $# -ne 0 ]]; then
 	exit 1
 fi
 
-find /input/* -type f -exec chmod 664 {} \;
-find /input/* -type d -exec chmod 775 {} \;
+umask 0
 
 num_partitions=$(cat /input/partitions)
 job_directory=$(cat /input/job_directory)
@@ -129,6 +128,8 @@ hdfs dfs -get "${output_dir_hdfs}" /output
 log "removing temporary hdfs directories"
 hdfs dfs -rm -r -skipTrash "${input_dir_hdfs}" "${output_dir_hdfs}"
 log "wrote output to local directory"
+
+chmod -R 777 /input /output
 
 log "A2KD Processing Complete"
 

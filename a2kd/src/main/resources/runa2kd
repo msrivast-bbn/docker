@@ -2,7 +2,7 @@
 
 #
 # Script run on the dockerd host to start the A2KD Container.
-umask 002
+umask 000
 
 function printLicense {
   cat <<-"EOF"
@@ -287,7 +287,6 @@ done
 # output directory - create if not there
 if [ ! -e "$outputDirectory" ] ; then
   mkdir -p "$outputDirectory"
-  chmod 775 "$outputDirectory"
 fi
 
 checkFSO "$outputDirectory" d rw "output directory"
@@ -378,8 +377,6 @@ if [ "$partitions" -lt 1 ] ; then
 fi
 echo setting partitions to $partitions
 echo "$partitions" >"${job_directory}/partitions"
-
-chmod 664 ${job_directory}/*
 
 [ -f log4j.properties ] && cp log4j.properties ${job_directory}
 
@@ -527,14 +524,7 @@ fi
 
 # Get kbresolver properties file iff defined
 kbResolverConfig=$(echo 'cat /config/kb_resolver_config/text()' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)")
-if [ "x${kbResolverConfig}" != x ]; then
-  unset errors
-  [ "x${kbResolverConfig}" = x ] || checkFSO "$kbResolverConfig" f r "KB Resolver Configuration File"
-  if [ ${#errors} -gt 0 ]; then
-    printf "\nERROR: Problem with KB KB Resolver Configuration File path specified in $a2kdConfiguration:\n"
-    printf "%s\n\n" "$errors"
-    exit 1
-  fi
+if [ "x${kbResolverConfig}" != x -a -r "${kbResolverConfig}" ]; then
   cp "${kbResolverConfig}" "${job_directory}/kbResolverConfig"
 fi
 
@@ -585,6 +575,8 @@ else
   DEFTA2KD=$DEFTIMAGE
 fi
 
+chmod -R 777 "$job_directory"
+
 echo "Running docker image ${DEFTA2KD}" 
 
 outputDirectory="$(readlink -f $outputDirectory)"
@@ -606,15 +598,32 @@ ${DOCKER_CMD:-docker} run -it --rm --name "$UN-$corpus_id" \
   -p $myPort:4040 \
   ${DEFTA2KD} a2kd.sh
 
+chmod -R o-w "$job_directory"
+
 printf "========================\n%s: Run complete. Cleaning up\n" "$(date)"
 if [ -d "${job_directory}/kbReportsDir" -a "x${kbReportsDir}" != x ]; then
-  echo "Copying out KB Report"
-  (cd "${job_directory}/kbReportsDir"; tar -cf - . ) | tar -C "${kbReportsDir}" -xf -
-  echo "KB Report copied"
+  [ -d "${kbReportsDir}" ] || mkdir -p "${kbReportsDir}"
+  if  [ "$(ls -A ${job_directory}/kbReportsDir )" ]; then
+    echo "Copying out Temporary KB Report directory"
+    (cd "${job_directory}/kbReportsDir"; tar -cf - . ) | tar -C "${kbReportsDir}" -xf -
+    echo "Temporary KB Report directory copied"
+  else
+    echo "Temporary KB Report directory is empty"
+  fi
+else
+  echo "KB reporting not enabled"
 fi
 if [ -d "${job_directory}/statsDir" -a "x${statsDir}" != x ]; then
-  echo "Copying out Statistics"
-  (cd "${job_directory}/statsDir"; tar -cf - . ) | tar -C "${statsDir}" -xf -
-  echo "Statistics copied"
+  [ -d "${statsDir}" ] || mkdir -p "${statsDir}"
+  if  [ "$(ls -A ${job_directory}/statsDir )" ]; then
+    echo "Copying out Temporary Statistics Directory"
+    (cd "${job_directory}/statsDir"; tar -cf - . ) | tar -C "${statsDir}" -xf -
+    echo "Temporary Statistics directory copied"
+  else
+    echo "Temporary Statistics directory is empty"
+  fi
+else
+  echo "Statistics reporting not enabled"
 fi
+printf "========================\n%s: Cleanup complete.\n" "$(date)"
 
