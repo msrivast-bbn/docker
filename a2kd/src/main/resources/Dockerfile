@@ -43,7 +43,7 @@ RUN apt-get update -y && \
 
 EXPOSE 4040
 
-LABEL version=@project.version@ timestamp=@maven.build.timestamp@
+LABEL version=@project.version@ timestamp=@timestamp@
 
 ENTRYPOINT ["/entrypoint.sh"]
 
