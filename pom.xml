@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.bbn.adept</groupId>
   <artifactId>deft-docker</artifactId>
-  <version>2.7.5</version>
+  <version>2.7.6-SNAPSHOT</version>
   <url>http://www.deftdocs.bbn.com/SitePages/Home.aspx</url>
   <packaging>pom</packaging>
   <name>deft-docker</name>
