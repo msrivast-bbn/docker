@@ -355,8 +355,13 @@ echo Starting KB image $corpusId
 $DOCKERCMD run -d --restart=always --name="$corpusId" $VOPT -p $dbPort:5432 -p $tsPort:8089 $imageId
 unset VOPT
 # give it a moment
-echo Waiting for initialization to complete
-sleep 30
+echo -n Waiting for initialization to complete
+while true; do
+  docker logs "$corpusId" | grep -q 'postgresql entered RUNNING state' && break
+  printf "."
+  sleep 1
+done
+printf "\n"
 
 echo Creating database $dbName for corpus $corpusId
 $DOCKERCMD exec -i "$corpusId" bash -s <<-EOF
