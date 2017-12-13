@@ -151,7 +151,7 @@
           </execution>
           <execution>
             <id>save</id>
-            <phase>install</phase>
+            <phase>deploy</phase>
             <goals>
               <goal>save</goal>
             </goals>
@@ -164,20 +164,84 @@
         <version>1.6.0</version>
         <executions>
           <execution>
-             <phase>install</phase>
+             <id>xz-image</id>
+             <phase>deploy</phase>
              <goals>
                <goal>exec</goal>
              </goals>
+             <configuration>
+               <workingDirectory>${project.build.directory}</workingDirectory>
+               <executable>xz</executable>
+               <arguments>
+                 <argument>-z</argument>
+                 <argument>${user.name}_${project.artifactId}.${maven.build.timestamp}.tar</argument> 
+               </arguments>
+             </configuration>
+           </execution>
+           <execution>
+             <id>sha256sum-image</id>
+             <phase>deploy</phase>
+             <goals>
+               <goal>exec</goal>
+             </goals>
+             <configuration>
+               <workingDirectory>${project.build.directory}</workingDirectory>
+               <executable>sha256sum</executable>
+               <arguments>
+                 <argument>-b</argument>
+                 <argument>${user.name}_${project.artifactId}.${maven.build.timestamp}.tar.xz</argument>
+               </arguments>
+               <outputFile>${project.build.directory}/${user.name}_${project.artifactId}.${maven.build.timestamp}.tar.xz.sha256sum</outputFile>
+             </configuration>
+           </execution>
+           <execution>
+             <id>chmod-runkb</id>
+             <phase>deploy</phase>
+             <goals>
+               <goal>exec</goal>
+             </goals>
+             <configuration>
+               <workingDirectory>${project.build.directory}</workingDirectory>
+               <executable>chmod</executable>
+               <arguments>
+                 <argument>a+rx</argument>
+                 <argument>runkb</argument> 
+               </arguments>
+             </configuration>
+           </execution>
+           <execution>
+             <id>tar-runkb</id>
+             <phase>deploy</phase>
+             <goals>
+               <goal>exec</goal>
+             </goals>
+             <configuration>
+               <workingDirectory>${project.build.directory}</workingDirectory>
+               <executable>tar</executable>
+               <arguments>
+                 <argument>-czf</argument>
+                 <argument>runkb.tgz</argument>
+                 <argument>runkb</argument> 
+               </arguments>
+             </configuration>
+           </execution>
+           <execution>
+             <id>sha256sum-runkb</id>
+             <phase>deploy</phase>
+             <goals>
+               <goal>exec</goal>
+             </goals>
+             <configuration>
+               <workingDirectory>${project.build.directory}</workingDirectory>
+               <executable>sha256sum</executable>
+               <arguments>
+                 <argument>-b</argument>
+                 <argument>runkb.tgz</argument>
+               </arguments>
+               <outputFile>${project.build.directory}/runkb.tgz.sha256sum</outputFile>
+             </configuration>
            </execution>
          </executions>
-         <configuration>
-           <workingDirectory>${project.build.directory}</workingDirectory>
-           <executable>xz</executable>
-           <arguments>
-             <argument>-z</argument>
-             <argument>${user.name}_${project.artifactId}.${maven.build.timestamp}.tar</argument> 
-           </arguments>
-         </configuration>
       </plugin>
     </plugins>
   </build>

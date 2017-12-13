@@ -1,5 +1,5 @@
 #!/bin/bash
-
+SECONDS=0
 #
 # Script run on the dockerd host to start the A2KD Container.
 umask 000
@@ -431,16 +431,30 @@ cnt=0
 dirs=$(echo ${SCP:-x} | tr ':' ' ')
 # convert to an array
 for dir in $dirs; do
-  dir=${dir//\/\*/}
-  # skip specific jars included in classpath
-  [ ${dir: -4} == ".jar" ] && continue
-  # we are only interested in directories
-  [ -d "$dir" ] || continue
-  [ -r "$dir" ] || errexit "ERROR: directory \"$dir\" in spark classpath is not readable"
-  [ -x "$dir" ] || errexit "ERROR: directory \"$dir\" in spark classpath is not searchable"
-  # The first must be our CLASSPATH_TOP with a following asterisk (we stripped that off above)
-  if [ -d "${dir}/com/bbn/serif" ]; then
-    CLASSPATH_TOP="$(dirname $dir)"
+  dir="${dir//\/\*/}"
+  if [ ! -e "$dir" ]; then
+    printf "WARNING: path \"$dir\" in spark classpath does not exist or is not accessible\n         Skipping\n"
+    continue
+  fi
+  if [ -d "$dir" ] ; then
+    [ -r "$dir" ] || errexit "ERROR: directory \"$dir\" in spark classpath is not readable"
+    [ -x "$dir" ] || errexit "ERROR: directory \"$dir\" in spark classpath is not searchable"
+    if [ -d "${dir}/com/bbn/serif" ]; then
+      CLASSPATH_TOP="$(dirname $dir)"
+    fi
+  else
+    [ -r "$dir" ] || errexit "ERROR: path \"$dir\" in spark classpath is not readable"
+  fi
+  # It is a path in the classpath. Is it under the shared top?
+  [[ $dir = $sharedTop/* ]] && continue # yes, link will already be there.
+  [[ $dir = /home/$UN ]] && errexit "ERROR: we cannot accept /home/$UN as a path in the classpath due to a
+       name collision. Please move your class hierarchy and/or jar files to a
+       subdirectory and retry"
+  # No. Are we already mounting it?
+  grep -Fq -- "-v $dir:" "$job_directory/mounts"
+  if [ $? -ne 0 ]; then
+    # no. Add it to the mount list
+    printf " -v $dir:$dir " >>"$job_directory/mounts"
   fi
 done
 first="${job_directory}/classes"
@@ -575,7 +589,7 @@ else
   DEFTA2KD=$DEFTIMAGE
 fi
 
-chmod -R 777 "$job_directory"
+chmod -Rf 777 "$job_directory"
 
 echo "Running docker image ${DEFTA2KD}" 
 
@@ -598,7 +612,7 @@ ${DOCKER_CMD:-docker} run -it --rm --name "$UN-$corpus_id" \
   -p $myPort:4040 \
   ${DEFTA2KD} a2kd.sh
 
-chmod -R o-w "$job_directory"
+chmod -Rf o-w "$job_directory"
 
 printf "========================\n%s: Run complete. Cleaning up\n" "$(date)"
 if [ -d "${job_directory}/kbReportsDir" -a "x${kbReportsDir}" != x ]; then
@@ -626,4 +640,5 @@ else
   echo "Statistics reporting not enabled"
 fi
 printf "========================\n%s: Cleanup complete.\n" "$(date)"
-
+d=$SECONDS
+printf "Total Elapsed Time %02d:%02d:%02d\n" $(($d / 3600)) $((($d / 60) % 60)) $(($d % 60))

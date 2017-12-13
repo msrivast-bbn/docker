@@ -166,7 +166,7 @@
                   <artifactId>adept-e2e</artifactId>
                   <type>jar</type>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                  <includes>/e2e_config.template.xml,kbresolver_properties.template.xml</includes>
+                  <includes>/e2e_config.template.xml</includes>
                 </artifactItem>
               </artifactItems>
             </configuration>
@@ -201,7 +201,7 @@
           </execution>
           <execution>
             <id>save</id>
-            <phase>install</phase>
+            <phase>deploy</phase>
             <goals>
               <goal>save</goal>
             </goals>
@@ -215,7 +215,7 @@
         <executions>
           <execution>
              <id>xz-build-directory</id>
-             <phase>install</phase>
+             <phase>deploy</phase>
              <goals>
                <goal>exec</goal>
              </goals>
@@ -226,6 +226,38 @@
                  <argument>-z</argument>
                  <argument>${user.name}_${project.artifactId}-${timestamp}.tar</argument> 
                </arguments>
+             </configuration>
+           </execution>
+          <execution>
+             <id>sha256sum-xz</id>
+             <phase>deploy</phase>
+             <goals>
+               <goal>exec</goal>
+             </goals>
+             <configuration>
+               <workingDirectory>${project.build.directory}</workingDirectory>
+               <executable>sha256sum</executable>
+               <arguments>
+                 <argument>-b</argument>
+                 <argument>${user.name}_${project.artifactId}-${timestamp}.tar.xz</argument> 
+               </arguments>
+               <outputFile>${project.build.directory}/${user.name}_${project.artifactId}-${timestamp}.tar.xz.sha256sum</outputFile>
+             </configuration>
+           </execution>
+          <execution>
+             <id>sha256sum-tgz</id>
+             <phase>deploy</phase>
+             <goals>
+               <goal>exec</goal>
+             </goals>
+             <configuration>
+               <workingDirectory>${project.build.directory}</workingDirectory>
+               <executable>sha256sum</executable>
+               <arguments>
+                 <argument>-b</argument>
+                 <argument>a2kd-${project.version}-utilities.${timestamp}.tar.gz</argument> 
+               </arguments>
+               <outputFile>${project.build.directory}/a2kd-${project.version}-utilities.${timestamp}.tar.gz.sha256sum</outputFile>
              </configuration>
            </execution>
           <!-- This is a violation of all that is Maven. We need to get these 
@@ -256,7 +288,7 @@
               <workingDirectory>${project.build.directory}</workingDirectory>
               <executable>chmod</executable>
               <arguments>
-                <argument>a+x</argument>
+                <argument>a+rx</argument>
                 <argument>runa2kd</argument>
               </arguments>
             </configuration>

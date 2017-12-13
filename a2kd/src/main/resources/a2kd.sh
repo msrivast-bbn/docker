@@ -27,7 +27,7 @@
 #    job_directory - the shared path to the job directory, mounted as /input
 set -eu
 set -o pipefail
-umask 002
+umask 0
 function errexit {
    ( >&2 echo "$1")
    logger -p user.error "$1"
@@ -58,8 +58,6 @@ if [[ $# -ne 0 ]]; then
 	echo "Exiting"
 	exit 1
 fi
-
-umask 0
 
 num_partitions=$(cat /input/partitions)
 job_directory=$(cat /input/job_directory)
@@ -128,8 +126,6 @@ hdfs dfs -get "${output_dir_hdfs}" /output
 log "removing temporary hdfs directories"
 hdfs dfs -rm -r -skipTrash "${input_dir_hdfs}" "${output_dir_hdfs}"
 log "wrote output to local directory"
-
-chmod -R 777 /input /output
 
 log "A2KD Processing Complete"
 
