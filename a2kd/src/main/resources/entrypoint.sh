@@ -19,7 +19,7 @@
 #    shared_top - the path to the shared directory on the 'outside', we will recreate that in the container
 #    job_timestamp - a (hopefully) unique time-based string
 #    job_directory - the path to the job directory - will be under shared_top
-
+umask 002
 echo In entrypoint.sh $job_timestamp
 case "${1:-x}" in
   -version | -v | version | --version)
@@ -42,7 +42,15 @@ fi
 GROUP_ID="${LOCAL_GROUP_ID:-9001}"
 echo "Creating User UID: $USERNAME:$USER_ID - $GROUPNAME:$GROUP_ID"
 groupadd --gid "${GROUP_ID}" "${GROUPNAME}" 2>/dev/null 
-useradd --shell /bin/bash -u $USER_ID -g ${GROUP_ID} -o -c "" -m "${USERNAME}"
+CREATEHOME="-m"
+if [ -d "/home/$USERNAME" ]; then
+  chown $USER_ID:$GROUP_ID  "/home/$USERNAME"
+  chmod 775 "/home/$USERNAME"
+  find "/home/$USERNAME" -mount -exec chown $USER_ID:$GROUP_ID {} \; -type d -exec chmod 775 {} \;
+  find  "/home/$USERNAME" -mount -type f -exec chmod 664 {} \;
+  CREATEHOME="-M"
+fi
+useradd --shell /bin/bash -u $USER_ID -g ${GROUP_ID} -o -c "" $CREATEHOME "${USERNAME}"
 export HOME="/home/${USERNAME}"
 cd ${HOME}
 mkdir .ssh

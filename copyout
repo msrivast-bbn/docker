@@ -1,0 +1,20 @@
+#!/bin/bash
+WD=$(dirname $0)
+cd "$WD"
+if [ $# -ge 1 ]; then
+  version="$1"
+else
+  version=$(awk -F'[><]' '/<version>/ {print $3; exit}' pom.xml)
+fi
+[[ $version = *-SNAPSHOT ]] && version=${version%%-SNAPSHOT}S
+umask 002
+DEST="/nfs/mercury-04/u40/${USER}/v${version}"
+echo "Copying artifacts and commands to $DEST"
+[ -d "$DEST" ] || mkdir -p "$DEST"
+[ -d "$DEST/test/a2kd" ] || mkdir "$DEST/test/a2kd"
+rm -f "$DEST/a2kd-*.tar.gz*" "$DEST/*_a2kd-*.tar.xz*" "$DEST/*_kb.*.tar.xz*" "$DEST/runkb*"
+( cd a2kd/target; cat a2kd-*-utilities.*.tar.gz ) | tar -C "$DEST/test/a2kd" -xzf -
+( cd a2kd/target; tar -cvf - a2kd-*-utilities.*.tar.gz* *_a2kd-*.tar.xz* ) | tar -C "$DEST" -xf -
+( cd kb/target; tar -cvf - *_kb.*.tar.xz* runkb.tgz* ) | tar -C "$DEST" -xf -
+( cd kb/target; cat runkb.tgz ) | tar -C "$DEST/test/a2kd/bin" -xzf -
+
