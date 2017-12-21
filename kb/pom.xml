@@ -16,7 +16,6 @@
     <maven.build.timestamp.format>yyMMdd-HHmmss-SSSS</maven.build.timestamp.format>
     <timestamp>${maven.build.timestamp}</timestamp>
     <jar.skipIfEmpty>true</jar.skipIfEmpty>
-    <maven.deploy.skip>true</maven.deploy.skip>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
@@ -30,6 +29,29 @@
   <!-- docker run -it -p xxxx:8089 -p xxxx:5432 deft/kb -->
   <build>
     <plugins>
+      <plugin>
+        <groupId>pl.project13.maven</groupId>
+        <artifactId>git-commit-id-plugin</artifactId>
+        <version>2.2.3</version>
+        <executions>
+          <execution>
+            <id>get-the-git-infos</id>
+            <goals>
+              <goal>revision</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+          <prefix>git</prefix>
+          <dateFormat>yyyyMMddHHmmssZ</dateFormat>
+          <dateFormatTimeZone>Etc/Zulu</dateFormatTimeZone>
+          <verbose>false</verbose>
+          <generateGitPropertiesFile>true</generateGitPropertiesFile>
+          <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
+          <skipPoms>false</skipPoms>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
@@ -76,29 +98,6 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>pl.project13.maven</groupId>
-        <artifactId>git-commit-id-plugin</artifactId>
-        <version>2.2.3</version>
-        <executions>
-          <execution>
-            <id>get-the-git-infos</id>
-            <goals>
-              <goal>revision</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
-          <prefix>git</prefix>
-          <dateFormat>yyyyMMddHHmmssZ</dateFormat>
-          <dateFormatTimeZone>Etc/Zulu</dateFormatTimeZone>
-          <verbose>false</verbose>
-          <generateGitPropertiesFile>true</generateGitPropertiesFile>
-          <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
-          <skipPoms>false</skipPoms>
-        </configuration>
-      </plugin>
-      <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>3.0.1</version>
         <executions>
@@ -130,7 +129,7 @@
         <configuration>
           <images>
             <image>
-              <name>${user.name}/${project.artifactId}:${maven.build.timestamp}</name>
+              <name>${user.name}/${project.artifactId}:${timestamp}</name>
               <build>
                 <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
                 <filter>@</filter>
@@ -138,8 +137,8 @@
             </image>
           </images>
           <verbose>true</verbose>
-          <saveFile>${project.build.directory}/${user.name}_${project.artifactId}.${maven.build.timestamp}.tar</saveFile>
-          <saveName>${user.name}/${project.artifactId}:${maven.build.timestamp}</saveName>
+          <saveFile>${project.build.directory}/${user.name}_${project.artifactId}.${timestamp}.tar</saveFile>
+          <saveName>${user.name}/${project.artifactId}:${timestamp}</saveName>
         </configuration>
         <executions>
           <execution>
@@ -149,13 +148,6 @@
               <goal>build</goal>
             </goals>
           </execution>
-          <execution>
-            <id>save</id>
-            <phase>deploy</phase>
-            <goals>
-              <goal>save</goal>
-            </goals>
-          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -163,85 +155,61 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>1.6.0</version>
         <executions>
-          <execution>
-             <id>xz-image</id>
-             <phase>deploy</phase>
-             <goals>
-               <goal>exec</goal>
-             </goals>
-             <configuration>
-               <workingDirectory>${project.build.directory}</workingDirectory>
-               <executable>xz</executable>
-               <arguments>
-                 <argument>-z</argument>
-                 <argument>${user.name}_${project.artifactId}.${maven.build.timestamp}.tar</argument> 
-               </arguments>
-             </configuration>
-           </execution>
            <execution>
-             <id>sha256sum-image</id>
-             <phase>deploy</phase>
-             <goals>
-               <goal>exec</goal>
-             </goals>
-             <configuration>
-               <workingDirectory>${project.build.directory}</workingDirectory>
-               <executable>sha256sum</executable>
-               <arguments>
-                 <argument>-b</argument>
-                 <argument>${user.name}_${project.artifactId}.${maven.build.timestamp}.tar.xz</argument>
-               </arguments>
-               <outputFile>${project.build.directory}/${user.name}_${project.artifactId}.${maven.build.timestamp}.tar.xz.sha256sum</outputFile>
-             </configuration>
-           </execution>
-           <execution>
-             <id>chmod-runkb</id>
-             <phase>deploy</phase>
-             <goals>
-               <goal>exec</goal>
-             </goals>
-             <configuration>
-               <workingDirectory>${project.build.directory}</workingDirectory>
-               <executable>chmod</executable>
-               <arguments>
-                 <argument>a+rx</argument>
-                 <argument>runkb</argument> 
-               </arguments>
-             </configuration>
-           </execution>
-           <execution>
-             <id>tar-runkb</id>
-             <phase>deploy</phase>
-             <goals>
-               <goal>exec</goal>
-             </goals>
-             <configuration>
-               <workingDirectory>${project.build.directory}</workingDirectory>
-               <executable>tar</executable>
-               <arguments>
-                 <argument>-czf</argument>
-                 <argument>runkb.tgz</argument>
-                 <argument>runkb</argument> 
-               </arguments>
-             </configuration>
-           </execution>
-           <execution>
-             <id>sha256sum-runkb</id>
-             <phase>deploy</phase>
-             <goals>
-               <goal>exec</goal>
-             </goals>
-             <configuration>
-               <workingDirectory>${project.build.directory}</workingDirectory>
-               <executable>sha256sum</executable>
-               <arguments>
-                 <argument>-b</argument>
-                 <argument>runkb.tgz</argument>
-               </arguments>
-               <outputFile>${project.build.directory}/runkb.tgz.sha256sum</outputFile>
-             </configuration>
+            <id>create-placeholder</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <phase>prepare-package</phase>
+            <configuration>
+              <executable>echo</executable>
+              <arguments>
+                <argument>${user.name}/${project.artifactId}:${timestamp}</argument>
+              </arguments>
+              <outputFile>${project.build.directory}/dockerTag.txt</outputFile>
+            </configuration>
            </execution>
          </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>attach-docker-tag</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>attach-artifact</goal>
+            </goals>
+            <configuration>
+              <artifacts>
+                <artifact>
+                  <file>${project.build.directory}/dockerTag.txt</file>
+                  <type>txt</type>
+                </artifact>
+              </artifacts>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <descriptors>
+            <descriptor>${basedir}/src/main/assembly/assembly.xml</descriptor>
+          </descriptors>
+        </configuration>
+        <executions>
+          <execution>
+            <id>create-utilities</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

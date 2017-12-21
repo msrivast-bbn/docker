@@ -16,7 +16,6 @@
     <maven.build.timestamp.format>yyMMdd-HHmmss-SSSS</maven.build.timestamp.format>
     <timestamp>${maven.build.timestamp}</timestamp>
     <jar.skipIfEmpty>true</jar.skipIfEmpty>
-    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
   <dependencies>
     <dependency>
@@ -27,10 +26,9 @@
     </dependency>
     <dependency>
       <groupId>com.bbn.adept</groupId>
-      <artifactId>adept-e2e</artifactId>
+      <artifactId>adept-kb</artifactId>
       <version>2.7.6</version>
-      <type>zip</type>
-      <classifier>bin</classifier>
+      <type>jar</type>
     </dependency>
   </dependencies>
   <build>
@@ -74,25 +72,6 @@
               <filtering>true</filtering>
             </configuration>
           </execution>
-          <execution>
-            <id>copy-rune2e</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/resources</directory>
-                  <filtering>true</filtering>
-                  <includes>
-                    <include>runa2kd</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -100,21 +79,15 @@
         <version>3.0.0</version>
         <executions>
           <execution>
-            <id>copy-a2kd</id>
+            <id>copy-adept-kb-with-deps</id>
             <phase>prepare-package</phase>
             <goals>
-              <goal>copy</goal>
+              <goal>copy-dependencies</goal>
             </goals>
             <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>com.bbn.adept</groupId>
-                  <artifactId>adept-e2e</artifactId>
-                  <type>jar</type>
-                  <outputDirectory>${project.build.directory}/appassembler/lib</outputDirectory>
-                </artifactItem>
-              </artifactItems>
-              <stripVersion>true</stripVersion>
+              <excludeClassifiers>bin,models,sources,javadoc</excludeClassifiers>
+              <excludeArtifactIds>adept-e2e</excludeArtifactIds>
+              <outputDirectory>${project.build.directory}/appassembler/lib</outputDirectory>
             </configuration>
           </execution>
           <execution>
@@ -128,30 +101,11 @@
                 <artifactItem>
                   <groupId>com.bbn.adept</groupId>
                   <artifactId>adept-e2e</artifactId>
-                  <type>zip</type>
-                  <classifier>bin</classifier>
+                  <type>jar</type>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                 </artifactItem>
               </artifactItems>
               <stripVersion>true</stripVersion>
-            </configuration>
-          </execution>
-          <execution>
-            <id>extract-a2kdtxt</id>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>com.bbn.adept</groupId>
-                  <artifactId>adept-e2e</artifactId>
-                  <type>zip</type>
-                  <classifier>bin</classifier>
-                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                  <includes>/*.txt</includes>
-                </artifactItem>
-              </artifactItems>
             </configuration>
           </execution>
           <execution>
@@ -166,7 +120,7 @@
                   <artifactId>adept-e2e</artifactId>
                   <type>jar</type>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                  <includes>/e2e_config.template.xml</includes>
+                  <includes>/e2e_config.template.xml,/adept/utilities/DEFT KB create schema.txt</includes>
                 </artifactItem>
               </artifactItems>
             </configuration>
@@ -199,13 +153,6 @@
               <goal>build</goal>
             </goals>
           </execution>
-          <execution>
-            <id>save</id>
-            <phase>deploy</phase>
-            <goals>
-              <goal>save</goal>
-            </goals>
-          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -213,56 +160,20 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>1.6.0</version>
         <executions>
-          <execution>
-             <id>xz-build-directory</id>
-             <phase>deploy</phase>
-             <goals>
-               <goal>exec</goal>
-             </goals>
-             <configuration>
-               <workingDirectory>${project.build.directory}</workingDirectory>
-               <executable>xz</executable>
-               <arguments>
-                 <argument>-z</argument>
-                 <argument>${user.name}_${project.artifactId}-${timestamp}.tar</argument> 
-               </arguments>
-             </configuration>
-           </execution>
-          <execution>
-             <id>sha256sum-xz</id>
-             <phase>deploy</phase>
-             <goals>
-               <goal>exec</goal>
-             </goals>
-             <configuration>
-               <workingDirectory>${project.build.directory}</workingDirectory>
-               <executable>sha256sum</executable>
-               <arguments>
-                 <argument>-b</argument>
-                 <argument>${user.name}_${project.artifactId}-${timestamp}.tar.xz</argument> 
-               </arguments>
-               <outputFile>${project.build.directory}/${user.name}_${project.artifactId}-${timestamp}.tar.xz.sha256sum</outputFile>
-             </configuration>
-           </execution>
-          <execution>
-             <id>sha256sum-tgz</id>
-             <phase>deploy</phase>
-             <goals>
-               <goal>exec</goal>
-             </goals>
-             <configuration>
-               <workingDirectory>${project.build.directory}</workingDirectory>
-               <executable>sha256sum</executable>
-               <arguments>
-                 <argument>-b</argument>
-                 <argument>a2kd-${project.version}-utilities.${timestamp}.tar.gz</argument> 
-               </arguments>
-               <outputFile>${project.build.directory}/a2kd-${project.version}-utilities.${timestamp}.tar.gz.sha256sum</outputFile>
-             </configuration>
-           </execution>
-          <!-- This is a violation of all that is Maven. We need to get these 
-            into the nexus via a raw repository. The downloads for these started to become 
-            unreliable, so we are locally 'caching' them. -->
+        <!-- 
+          The downloads for these started to become unreliable, so we are 
+          locally 'caching' them.
+
+          The source for each file is shown with it. We used a wget early in the
+          dockerfile run to download each before manipulating them later to 
+          install them appropriately 
+
+          See https://github.com/tianon/gosu/blob/master/INSTALL.md for a good 
+          method of downloading and verifying the packages from within the 
+          Dockerfile. It would be good to store the files in a local web site 
+          or Nexus raw repository to keep demands on the source servers down 
+          and help ensure continued access...
+        -->
           <execution>
             <id>copy-repo</id>
             <goals>
@@ -272,25 +183,49 @@
             <configuration>
               <executable>cp</executable>
               <arguments>
+                <!-- https://archive.apache.org/dist/spark/spark-2.0.0/spark-2.0.0-bin-hadoop2.7.tgz -->
                 <argument>/nfs/mercury-09/u28/jgriffit/repo/spark-2.0.0-bin-hadoop2.6.tgz</argument>
+                <!-- https://github.com/tianon/gosu/releases/download/1.10/gosu-amd64 -->
                 <argument>/nfs/mercury-09/u28/jgriffit/repo/gosu-amd64</argument>
                 <argument>${project.build.outputDirectory}</argument>
               </arguments>
             </configuration>
           </execution>
+          <!-- this is used in the package module to identify the docker image to save -->
           <execution>
-            <id>chmod-runa2kd</id>
+            <id>create-placeholder</id>
             <goals>
               <goal>exec</goal>
             </goals>
-            <phase>package</phase>
+            <phase>prepare-package</phase>
             <configuration>
-              <workingDirectory>${project.build.directory}</workingDirectory>
-              <executable>chmod</executable>
+              <executable>echo</executable>
               <arguments>
-                <argument>a+rx</argument>
-                <argument>runa2kd</argument>
+                <argument>${user.name}/${project.artifactId}:${timestamp}</argument>
               </arguments>
+              <outputFile>${project.build.directory}/dockerTag.txt</outputFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>attach-docker-tag</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>attach-artifact</goal>
+            </goals>
+            <configuration>
+              <artifacts>
+                <artifact>
+                  <file>${project.build.directory}/dockerTag.txt</file>
+                  <type>txt</type>
+                </artifact>
+              </artifacts>
             </configuration>
           </execution>
         </executions>

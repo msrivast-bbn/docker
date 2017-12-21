@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<assembly>
+  <id>utilities.${timestamp}</id>
+  <formats>
+    <format>tar.gz</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <fileSets>
+    <fileSet>
+      <directory>target/appassembler</directory>
+      <outputDirectory></outputDirectory>
+    </fileSet>
+  </fileSets>
+  <files>
+    <file>
+      <source>${project.build.directory}/runkb</source>
+      <destName>runkb</destName>
+      <outputDirectory>bin</outputDirectory>
+      <fileMode>755</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
+    <file>
+      <source>${basedir}/src/main/doc/runkb.md</source>
+      <outputDirectory>doc</outputDirectory>
+      <destName>runkb.md</destName>
+      <fileMode>444</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
+  </files>
+</assembly>
