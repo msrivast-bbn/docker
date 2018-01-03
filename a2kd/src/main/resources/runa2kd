@@ -338,6 +338,7 @@ fi
 job_directory="${shared_directory}/job_${job_timestamp}"
 [ -e "$job_directory" ] && errexit "ERROR: Job Directory $job_directory already exists!"
 mkdir -p "$job_directory" || errexit "ERROR: Could not create Job Directory $job_directory"
+chmod 775 "$a2kdConfiguration"
 
 # populate the job directory with our input info
 echo "$0 $@" >"${job_directory}/command"
@@ -345,8 +346,10 @@ echo "$job_directory" >"${job_directory}/job_directory"
 echo "$job_timestamp" >"${job_directory}/job_timestamp"
 cp "$a2kdConfiguration" "${job_directory}/config.xml"
 a2kdConfiguration="${job_directory}/config.xml"
+chmod ug+rw "$a2kdConfiguration"
 cp "$sparkProperties" "${job_directory}/spark.conf"
 sparkProperties="${job_directory}/spark.conf"
+chmod ug+rw "$sparkProperties"
 
 # Get the language(s) and their input directories so we can mount them in the Docker container
 dirs=$(echo 'cat /config/algorithm_set/input_directory/text()' | xmllint --shell "$a2kdConfiguration" | grep -vE "^(/ > | ---)")
@@ -511,7 +514,13 @@ if [ "x${gatherStats}" = xtrue -o "x${gatherStats}" = xt -o "x${gatherStats}" = 
     printf "%s\n\n" "$errors"
     exit 1
   fi
+  # Creating these here lets us determine the file owner and group
   mkdir "${job_directory}/statsDir"
+  touch "${job_directory}/statsDir/stats"
+  for lang in $langs; do
+    touch "${job_directory}/statsDir/stats_${lang}"
+  done
+  chmod -Rf a+rwx "${job_directory}/statsDir"
 fi
 
 # Set up kb_report dir iff generate_kb_reports is true. Note that if true, reports will always be generated into job_directory.
@@ -533,7 +542,12 @@ if [ "x${generateKBReports}" = xtrue -o "x${generateKBReports}" = xt -o "x${gene
     printf "%s\n\n" "$errors"
     exit 1
   fi
-  mkdir "${job_directory}/kbReportsDir"
+  umask 000
+  mkdir -p "${job_directory}/kbReportsDir/${corpus_id}"
+  touch "${job_directory}/kbReportsDir/summary.txt"
+  for etype in beliefs entities events relations sentiments; do
+    touch "${job_directory}/kbReportsDir/${corpus_id}/${corpus_id}.${etype}.csv"
+  done
 fi
 
 # Get kbresolver properties file iff defined
@@ -596,6 +610,12 @@ echo "Running docker image ${DEFTA2KD}"
 outputDirectory="$(readlink -f $outputDirectory)"
 SCD=""
 [ "x${SPARK_CONF_DIR}" = x ] || SCD="-v $SPARK_CONF_DIR:/spark"
+if [ "x${DEBUG_A2KD}" = x ] ; then
+  A2KDSH=a2kd.sh
+else
+  A2KDSH=bash
+fi
+
 ${DOCKER_CMD:-docker} run -it --rm --name "$UN-$corpus_id" \
   -e LOCAL_USER_ID=$UI \
   -e LOCAL_USER_NAME="$UN" \
@@ -610,7 +630,7 @@ ${DOCKER_CMD:-docker} run -it --rm --name "$UN-$corpus_id" \
   -v $HADOOP_CONF_DIR:/hadoop $SCD \
   $(cat ${job_directory}/mounts) \
   -p $myPort:4040 \
-  ${DEFTA2KD} a2kd.sh
+  ${DEFTA2KD} ${A2KDSH}
 
 chmod -Rf o-w "$job_directory"
 

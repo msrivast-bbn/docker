@@ -64,6 +64,10 @@
       <id>DEFTLibraryDependencies</id>
       <url>http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTLibraryDependencies</url>
     </repository>
+    <repository>
+      <id>CogCompCsDependencies</id>
+      <url>http://cogcomp.org/m2repo</url>
+    </repository>
   </repositories>
   <scm>
     <developerConnection>scm:git:ssh://www.deftware.bbn.com:7999/adept/docker.git</developerConnection>
@@ -72,6 +76,6 @@
   <modules>
     <module>kb</module>
     <module>a2kd</module>
-    <!--module>nextcentury</module-->
+    <module>package</module>
   </modules>
 </project>
