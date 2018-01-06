@@ -1,0 +1,32 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
+  <id>${timestamp}</id>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <baseDirectory/>
+  <fileSets>
+    <fileSet>
+      <directory>${project.build.directory}/appassembler/lib</directory>
+      <outputDirectory>lib</outputDirectory>
+      <excludes>
+        <exclude>*models*</exclude>
+        <exclude>*sources*</exclude>
+      </excludes>
+    </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}/appassembler/conf</directory>
+      <outputDirectory>conf</outputDirectory>
+      <fileMode>644</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}/appassembler/doc</directory>
+      <outputDirectory>doc</outputDirectory>
+      <fileMode>644</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}/appassembler/bin</directory>
+      <outputDirectory>bin</outputDirectory>
+      <fileMode>755</fileMode>
+    </fileSet>
+  </fileSets>
+</assembly>

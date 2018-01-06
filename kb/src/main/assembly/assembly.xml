@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <assembly>
-  <id>utilities.${timestamp}</id>
+  <id>utilities</id>
   <formats>
     <format>tar.gz</format>
   </formats>

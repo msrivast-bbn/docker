@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <assembly>
-  <id>utilities.${timestamp}</id>
+  <id>utilities</id>
   <formats>
     <format>tar.gz</format>
   </formats>
@@ -13,10 +13,31 @@
   </fileSets>
   <files>
     <file>
-      <source>src/main/resources/DEFTCreateUserDB.sh</source>
+      <source>src/main/doc/runa2kd.md</source>
+      <outputDirectory>doc</outputDirectory>
+      <fileMode>444</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
+    <file>
+      <source>${project.build.outputDirectory}/DEFTCreateUserDB.sh</source>
       <destName>DEFTCreateUserDB</destName>
       <outputDirectory>bin</outputDirectory>
       <fileMode>755</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
+    <file>
+      <source>${project.build.outputDirectory}/GenerateHumanReadableReport.xml</source>
+      <outputDirectory>conf</outputDirectory>
+      <fileMode>444</fileMode>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
+    </file>
+    <file>
+      <source>${project.build.outputDirectory}/KB.template.xml</source>
+      <outputDirectory>conf</outputDirectory>
+      <fileMode>444</fileMode>
       <lineEnding>unix</lineEnding>
       <filtered>true</filtered>
     </file>
@@ -29,14 +50,6 @@
       <filtered>true</filtered>
     </file>
     <file>
-      <source>${project.build.outputDirectory}/e2e_config.template.xml</source>
-      <outputDirectory>conf</outputDirectory>
-      <destName>a2kd_config.template.xml</destName>
-      <fileMode>444</fileMode>
-      <lineEnding>unix</lineEnding>
-      <filtered>true</filtered>
-    </file>
-    <file>
       <source>${project.build.outputDirectory}/spark.template.conf</source>
       <outputDirectory>conf</outputDirectory>
       <destName>spark.template.conf</destName>
@@ -45,15 +58,9 @@
       <filtered>true</filtered>
     </file>
     <file>
-      <source>src/main/resources/KB.xml</source>
+      <source>${project.build.outputDirectory}/e2e_config.template.xml</source>
       <outputDirectory>conf</outputDirectory>
-      <fileMode>444</fileMode>
-      <lineEnding>unix</lineEnding>
-      <filtered>true</filtered>
-    </file>
-    <file>
-      <source>src/main/doc/runa2kd.md</source>
-      <outputDirectory>doc</outputDirectory>
+      <destName>a2kd_config.template.xml</destName>
       <fileMode>444</fileMode>
       <lineEnding>unix</lineEnding>
       <filtered>true</filtered>

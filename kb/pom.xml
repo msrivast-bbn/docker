@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.bbn.adept</groupId>
@@ -10,7 +11,18 @@
   <artifactId>kb</artifactId>
   <name>kb</name>
   <packaging>pom</packaging>
-  <description>A Docker image with the Parliament Triple-Store AND Postgres</description>
+  <description>
+  Create a Docker image of the Knowledge Broker in a docker repository. A 
+  Knowledge Broker consists of a PostgreSQL server and Parliament server. 
+  If no docker environment variables are set, then this will try to use a dockerd
+  on the local host. If DOCKER_HOST is set, this will use the dockerd on the
+  indicated host. 
+  In the install phase, just leaves the docker image in the repository.
+  In the deploy phase, downloads the image to a file, compresses it, and generates
+  a sha256um over the compressed file.
+  Also creates a utilities archive containing the runkb command and its
+  documentation.
+  </description>
   <properties>
     <parliament-version>2.7.10</parliament-version>
     <maven.build.timestamp.format>yyMMdd-HHmmss-SSSS</maven.build.timestamp.format>
@@ -26,9 +38,12 @@
       <type>zip</type>
     </dependency>
   </dependencies>
-  <!-- docker run -it -p xxxx:8089 -p xxxx:5432 deft/kb -->
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+      </plugin>
       <plugin>
         <groupId>pl.project13.maven</groupId>
         <artifactId>git-commit-id-plugin</artifactId>
@@ -84,7 +99,7 @@
             </goals>
             <configuration>
               <outputDirectory>${project.build.directory}</outputDirectory>
-	      <resources>
+              <resources>
                 <resource>
                   <directory>${basedir}/src/main/resources</directory>
                   <filtering>true</filtering>
@@ -123,77 +138,6 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>io.fabric8</groupId>
-        <artifactId>docker-maven-plugin</artifactId>
-        <version>0.23.0</version>
-        <configuration>
-          <images>
-            <image>
-              <name>${user.name}/${project.artifactId}:${timestamp}</name>
-              <build>
-                <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
-                <filter>@</filter>
-              </build>
-            </image>
-          </images>
-          <verbose>true</verbose>
-          <saveFile>${project.build.directory}/${user.name}_${project.artifactId}.${timestamp}.tar</saveFile>
-          <saveName>${user.name}/${project.artifactId}:${timestamp}</saveName>
-        </configuration>
-        <executions>
-          <execution>
-            <id>build-image</id>
-            <phase>package</phase>
-            <goals>
-              <goal>build</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
-        <executions>
-           <execution>
-            <id>create-placeholder</id>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <phase>prepare-package</phase>
-            <configuration>
-              <executable>echo</executable>
-              <arguments>
-                <argument>${user.name}/${project.artifactId}:${timestamp}</argument>
-              </arguments>
-              <outputFile>${project.build.directory}/dockerTag.txt</outputFile>
-            </configuration>
-           </execution>
-         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>3.0.0</version>
-        <executions>
-          <execution>
-            <id>attach-docker-tag</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>attach-artifact</goal>
-            </goals>
-            <configuration>
-              <artifacts>
-                <artifact>
-                  <file>${project.build.directory}/dockerTag.txt</file>
-                  <type>txt</type>
-                </artifact>
-              </artifacts>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>3.0.0</version>
         <configuration>
@@ -204,7 +148,7 @@
         <executions>
           <execution>
             <id>create-utilities</id>
-            <phase>prepare-package</phase>
+            <phase>package</phase>
             <goals>
               <goal>single</goal>
             </goals>
@@ -213,4 +157,124 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>development</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>0.23.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <images>
+                <image>
+                  <name>${user.name}/${project.artifactId}:${timestamp}</name>
+                  <build>
+                    <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
+                    <filter>@</filter>
+                  </build>
+                </image>
+              </images>
+              <saveFile>${project.build.directory}/${user.name}_${project.artifactId}.${timestamp}.tar</saveFile>
+              <saveName>${user.name}/${project.artifactId}:${timestamp}</saveName>
+            </configuration>
+            <executions>
+              <execution>
+                <id>build-image</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>0.23.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <images>
+                <image>
+                  <name>${user.name}/${project.artifactId}:${timestamp}</name>
+                  <build>
+                    <dockerFileDir>${project.build.outputDirectory}</dockerFileDir>
+                    <filter>@</filter>
+                  </build>
+                </image>
+              </images>
+              <saveFile>${project.build.directory}/${user.name}_${project.artifactId}.${timestamp}.tar</saveFile>
+              <saveName>${user.name}/${project.artifactId}:${timestamp}</saveName>
+            </configuration>
+            <executions>
+              <execution>
+                <id>build-image</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>save-image</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>save</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.6.0</version>
+            <executions>
+              <execution>
+                <id>xz-image</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <workingDirectory>${project.build.directory}</workingDirectory>
+                  <executable>xz</executable>
+                  <arguments>
+                    <argument>-z</argument>
+                    <argument>${user.name}_${project.artifactId}.${timestamp}.tar</argument> 
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>sha256sum-image</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <workingDirectory>${project.build.directory}</workingDirectory>
+                  <executable>sha256sum</executable>
+                  <arguments>
+                    <argument>-b</argument>
+                    <argument>${user.name}_${project.artifactId}.${timestamp}.tar.xz</argument>
+                  </arguments>
+                  <outputFile>${project.build.directory}/${user.name}_${project.artifactId}.${timestamp}.tar.xz.sha256sum</outputFile>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

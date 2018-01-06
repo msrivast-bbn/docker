@@ -20,16 +20,38 @@ function help() {
 EOF
 }
 
+version() {
+  printf "\n----------\n$1 version information\n----------\n"
+  printf "Version:           %s\n" ${git.build.version}
+  printf "branch:            %s\n" ${git.branch}
+  printf "tags:              %s\n" ${git.tags}
+  printf "commit time:       %s\n" ${git.commit.time}
+  printf "build time:        %s\n" ${git.build.time}
+  printf "closest tag count: %s\n" ${git.closest.tag.commit.count}
+  printf "closest tag:       %s\n" ${git.closest.tag.name}
+  printf "git commit:        %s\n" ${git.commit.id.abbrev}
+  printf "dirty:             %s\n" ${git.dirty}
+  echo
+  exit 0
+}
+
 # Check argument
 if [ $# -ne 1 ] ; then
   echo "ERROR: Incorrect number of arguments\n"
   help $(basename $0)
   exit 1
 fi
+
 if [ "$1" = "-h" -o "$1" = "--help" ] ; then
   help $(basename $0)
   exit 0
 fi
+
+if [ "$1" = "-v" -o "$1" = "--version" ] ; then
+  version $(basename $0)
+  exit 1
+fi
+
 if [ ! -e "$1" ] ; then
   echo "ERROR: $1 does not exist"
   exit 1

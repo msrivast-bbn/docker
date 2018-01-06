@@ -73,9 +73,30 @@
     <developerConnection>scm:git:ssh://www.deftware.bbn.com:7999/adept/docker.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>2.5.3</version>
+          <configuration>
+            <useReleaseProfile>false</useReleaseProfile>
+            <releaseProfiles>release</releaseProfiles>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
   <modules>
     <module>kb</module>
     <module>a2kd</module>
-    <module>package</module>
+    <module>utilities</module>
   </modules>
 </project>
