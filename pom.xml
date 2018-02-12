@@ -172,9 +172,31 @@
       </plugin>
     </plugins>
   </build>
-  <modules>
-    <module>kb</module>
-    <module>a2kd</module>
-    <module>utilities</module>
-  </modules>
+  <profiles>
+    <profile>
+      <id>SkipModelBuild</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <modules>
+        <module>kb</module>
+        <module>a2kd</module>
+        <module>utilities</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>DoModelBuild</id>
+      <activation>
+        <property>
+          <name>env.BUILD_MODEL</name>
+        </property>
+      </activation>
+      <modules>
+        <module>kb</module>
+        <module>a2kd</module>
+        <module>utilities</module>
+        <module>modeltree</module>
+      </modules>
+    </profile>
+  </profiles>
 </project>

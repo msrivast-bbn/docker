@@ -16,6 +16,11 @@
     <maven.build.timestamp.format>yyMMdd-HHmmss-SSSS</maven.build.timestamp.format>
     <timestamp>${maven.build.timestamp}</timestamp>
     <jar.skipIfEmpty>true</jar.skipIfEmpty>
+    <baseDir>${project.build.directory}/</baseDir>
+    <ecpathDir>${baseDir}/e2e_external_classpath</ecpathDir>
+    <classesDir>${ecpathDir}/classes</classesDir>
+    <wikifierDir>${ecpathDir}/illinois-wikifier-models/wikifier</wikifierDir>
+    <blenderDir>${classesDir}/edu/rpi/blender</blenderDir>
   </properties>
   <dependencies>
     <dependency>
@@ -27,6 +32,12 @@
     <dependency>
       <groupId>edu.illinois.cs.cogcomp</groupId>
       <artifactId>illinois-coref-ace-model</artifactId>
+      <version>1.5</version>
+      <type>jar</type>
+    </dependency>
+    <dependency>
+      <groupId>edu.illinois.cs.cogcomp</groupId>
+      <artifactId>illinois-coref-ace-resources.jar</artifactId>
       <version>1.5</version>
       <type>jar</type>
     </dependency>
@@ -149,27 +160,29 @@
     </dependency>
     <dependency>
       <groupId>com.bbn.adept</groupId>
-      <artifactId>a2kd</artifactId>
-      <version>${project.version}</version>
-      <classifier>utilities</classifier>
+      <artifactId>adept-e2e</artifactId>
+      <version>2.7.7-SNAPSHOT</version>
+      <type>jar</type>
     </dependency>
     <dependency>
-      <groupId>com.bbn.adept</groupId>
-      <artifactId>a2kd</artifactId>
-      <version>${project.version}</version>
-      <type>txt</type>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>2.10.6</version>
     </dependency>
+    <!--
+    This next dependency is actually scala 2.11.8, but Maven does not
+    permit multiple versions of the same dependency to be easily included
+    in the same artifact.
+    We 'wrap' the scala 11 library in a com.bbn.adept group Id in a peer-
+    level module (scala11), which merely installs the scala 11 library under
+    the com.bbn.adept groupId. Because the GAV coordinates no longer match,
+    maven is fooled and we can copy both versions of the library to this
+    artifact.
+    -->
     <dependency>
       <groupId>com.bbn.adept</groupId>
-      <artifactId>kb</artifactId>
-      <version>${project.version}</version>
-      <classifier>utilities</classifier>
-    </dependency>
-    <dependency>
-      <groupId>com.bbn.adept</groupId>
-      <artifactId>kb</artifactId>
-      <version>${project.version}</version>
-      <type>txt</type>
+      <artifactId>scala-library</artifactId>
+      <version>2.11.8</version>
     </dependency>
   </dependencies>
   <build>
@@ -178,16 +191,170 @@
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>copy-deps</id>
+            <id>copy-jars</id>
             <goals>
-              <goal>copy-dependencies</goal>
+              <goal>copy</goal>
             </goals>
             <configuration>
-              <includeTypes>jar</includeTypes>
+              <outputDirectory>${ecpathDir}</outputDirectory>
+              <excludeTransitive>true</excludeTransitive>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>edu.illinois.cs.cogcomp</groupId>
+                  <artifactId>illinois-common-resources</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.illinois.cs.cogcomp</groupId>
+                  <artifactId>illinois-coref-ace-model</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.illinois.cs.cogcomp</groupId>
+                  <artifactId>illinois-coref-ace-resources.jar</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.illinois.cs.cogcomp</groupId>
+                  <artifactId>illinois-ner</artifactId>
+                  <classifier>models-conll</classifier>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.illinois.cs.cogcomp</groupId>
+                  <artifactId>illinois-ner</artifactId>
+                  <classifier>models-ontonotes</classifier>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.washington.cs.knowitall</groupId>
+                  <artifactId>opennlp-chunk-models</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.washington.cs.knowitall</groupId>
+                  <artifactId>opennlp-postag-models</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.washington.cs.knowitall</groupId>
+                  <artifactId>opennlp-sent-models</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.washington.cs.knowitall</groupId>
+                  <artifactId>opennlp-tokenize-models</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.washington.cs.knowitall</groupId>
+                  <artifactId>reverb-models</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.scala-lang</groupId>
+                  <artifactId>scala-library</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.bbn.adept</groupId>
+                  <artifactId>scala-library</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.stanford.nlp</groupId>
+                  <artifactId>stanford-corenlp</artifactId>
+                  <classifier>models-chinese</classifier>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.stanford.nlp</groupId>
+                  <artifactId>stanford-corenlp</artifactId>
+                  <classifier>models-english</classifier>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.stanford.nlp</groupId>
+                  <artifactId>stanford-corenlp</artifactId>
+                  <classifier>models-english-kbp</classifier>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.stanford.nlp</groupId>
+                  <artifactId>stanford-corenlp</artifactId>
+                  <classifier>models</classifier>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.stanford.nlp</groupId>
+                  <artifactId>stanford-kbp</artifactId>
+                  <classifier>models</classifier>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.stanford.nlp.kbp.slotfilling</groupId>
+                  <artifactId>stanford-mimlre-model</artifactId>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.stanford.nlp</groupId>
+                  <artifactId>stanford-srparser</artifactId>
+                  <classifier>models</classifier>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-RPI_EDL_Data</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>edu.qccuny</groupId>
+                  <artifactId>RPI_EDL_Data</artifactId>
+                  <classifier>bbn</classifier>
+                  <type>tar.gz</type>
+                  <outputDirectory>${blenderDir}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.bbn.adept</groupId>
+                  <artifactId>adept-e2e</artifactId>
+                  <includes>eventFinder.template.params,ontology_mapping.template.xml,serif_config.template.xml,xlwikifier-demo.template.config,log4j.properties</includes>
+                  <outputDirectory>${classesDir}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.illinois.cs.cogcomp</groupId>
+                  <artifactId>xlwikifier-index</artifactId>
+                  <type>.tar.gz</type>
+                  <outputDirectory>${wikifierDir}/</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.illinois.cs.cogcomp</groupId>
+                  <artifactId>xlwikifier-freebase-index</artifactId>
+                  <type>.tar.gz</type>
+                  <outputDirectory>${wikifierDir}/</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>edu.illinois.cs.cogcomp</groupId>
+                  <artifactId>xlwikifier-embeddings</artifactId>
+                  <type>.tar.gz</type>
+                  <outputDirectory>${wikifierDir}/</outputDirectory>
+                </artifactItem>
+              </artifactItems>
             </configuration>
           </execution>
         </executions>
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>CreateArchive</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>CreateTree</id>
+      <activation>
+        <property>
+          <name>env.MODEL_DEST</name>
+        </property>
+      </activation>
+      <properties>
+        <baseDir>${env.MODEL_DEST}</baseDir>
+      </properties>
+    </profile>
+  </profiles>
 </project>

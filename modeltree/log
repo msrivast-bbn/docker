@@ -1,98 +1,0 @@
-[INFO] Scanning for projects...
-[INFO]                                                                         
-[INFO] ------------------------------------------------------------------------
-[INFO] Building a2kd-model 2.7.7-SNAPSHOT
-[INFO] ------------------------------------------------------------------------
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/central/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTReleases/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdparty/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdpartySnapshots/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/apache-snapshots/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/ApacheReleases/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTModelReleases/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTLibraryDependencies/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-Downloading: http://e-nexus-01.bbn.com:8081/nexus/content/groups/public/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.pom
-[WARNING] The POM for edu.illinois.cs.cogcomp:illinois-common-resources:jar:1.1 is missing, no dependency information available
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTReleases/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdparty/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdpartySnapshots/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/apache-snapshots/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml
-2/2 KB   2/2 KB            Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/ApacheReleases/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTModelReleases/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml
-                  Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTLibraryDependencies/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml
-         Downloading: http://e-nexus-01.bbn.com:8081/nexus/content/groups/public/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml
-         Downloaded: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/maven-metadata.xml (2 KB at 7.4 KB/sec)
-                  Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTReleases/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdpartySnapshots/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdparty/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml
-         Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/apache-snapshots/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml
-601/601 B                           Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/ApacheReleases/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTModelReleases/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml
-            Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTLibraryDependencies/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml
-            Downloading: http://e-nexus-01.bbn.com:8081/nexus/content/groups/public/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml
-                                                Downloaded: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/com/bbn/adept/deft-docker/2.7.7-SNAPSHOT/maven-metadata.xml (601 B at 3.7 KB/sec)
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTReleases/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdparty/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdpartySnapshots/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml
-            Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/apache-snapshots/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml
-                        Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/ApacheReleases/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTModelReleases/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml
-1003/1003 B                 Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTLibraryDependencies/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml
-                            Downloading: http://e-nexus-01.bbn.com:8081/nexus/content/groups/public/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml
-                                          Downloaded: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/com/bbn/adept/kb/2.7.7-SNAPSHOT/maven-metadata.xml (1003 B at 5.4 KB/sec)
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/central/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/central/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-                            Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/a2kd-2.7.7-SNAPSHOT-utilities.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTSnapshots/com/bbn/adept/kb/2.7.7-SNAPSHOT/kb-2.7.7-SNAPSHOT-utilities.jar
-                                                        Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTReleases/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTReleases/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTReleases/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/a2kd-2.7.7-SNAPSHOT-utilities.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTReleases/com/bbn/adept/kb/2.7.7-SNAPSHOT/kb-2.7.7-SNAPSHOT-utilities.jar
-                                                        Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdparty/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdparty/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdparty/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/a2kd-2.7.7-SNAPSHOT-utilities.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdparty/com/bbn/adept/kb/2.7.7-SNAPSHOT/kb-2.7.7-SNAPSHOT-utilities.jar
-                                                        Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdpartySnapshots/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdpartySnapshots/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/a2kd-2.7.7-SNAPSHOT-utilities.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdpartySnapshots/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/thirdpartySnapshots/com/bbn/adept/kb/2.7.7-SNAPSHOT/kb-2.7.7-SNAPSHOT-utilities.jar
-                                                        Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/apache-snapshots/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/apache-snapshots/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/apache-snapshots/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/a2kd-2.7.7-SNAPSHOT-utilities.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/apache-snapshots/com/bbn/adept/kb/2.7.7-SNAPSHOT/kb-2.7.7-SNAPSHOT-utilities.jar
-                                                        Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/ApacheReleases/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/ApacheReleases/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/ApacheReleases/com/bbn/adept/kb/2.7.7-SNAPSHOT/kb-2.7.7-SNAPSHOT-utilities.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/ApacheReleases/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/a2kd-2.7.7-SNAPSHOT-utilities.jar
-                                                        Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTModelReleases/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTModelReleases/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTModelReleases/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/a2kd-2.7.7-SNAPSHOT-utilities.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTModelReleases/com/bbn/adept/kb/2.7.7-SNAPSHOT/kb-2.7.7-SNAPSHOT-utilities.jar
-                                                        Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTLibraryDependencies/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTLibraryDependencies/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTLibraryDependencies/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/a2kd-2.7.7-SNAPSHOT-utilities.jar
-Downloading: http://deftpack.bbn.com:8081/nexus/content/repositories/DEFTLibraryDependencies/com/bbn/adept/kb/2.7.7-SNAPSHOT/kb-2.7.7-SNAPSHOT-utilities.jar
-                                                        Downloading: http://e-nexus-01.bbn.com:8081/nexus/content/groups/public/edu/illinois/cs/cogcomp/illinois-common-resources/1.1/illinois-common-resources-1.1.jar
-Downloading: http://e-nexus-01.bbn.com:8081/nexus/content/groups/public/edu/illinois/cs/cogcomp/illinois-ner/2.6/illinois-ner-2.6-models-ontonotes.jar
-Downloading: http://e-nexus-01.bbn.com:8081/nexus/content/groups/public/com/bbn/adept/a2kd/2.7.7-SNAPSHOT/a2kd-2.7.7-SNAPSHOT-utilities.jar
-Downloading: http://e-nexus-01.bbn.com:8081/nexus/content/groups/public/com/bbn/adept/kb/2.7.7-SNAPSHOT/kb-2.7.7-SNAPSHOT-utilities.jar
-                                                        [INFO] ------------------------------------------------------------------------
-[INFO] BUILD FAILURE
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time: 37.218 s
-[INFO] Finished at: 2017-12-24T09:43:11-05:00
-[INFO] Final Memory: 12M/481M
-[INFO] ------------------------------------------------------------------------
-[ERROR] Failed to execute goal on project a2kd-model: Could not resolve dependencies for project com.bbn.adept:a2kd-model:pom:2.7.7-SNAPSHOT: The following artifacts could not be resolved: edu.illinois.cs.cogcomp:illinois-common-resources:jar:1.1, edu.illinois.cs.cogcomp:illinois-ner:jar:models-ontonotes:2.6, com.bbn.adept:a2kd:jar:utilities:2.7.7-SNAPSHOT, com.bbn.adept:kb:jar:utilities:2.7.7-SNAPSHOT: Could not find artifact edu.illinois.cs.cogcomp:illinois-common-resources:jar:1.1 in nexus (http://deftpack.bbn.com:8081/nexus/content/repositories/central) -> [Help 1]
-[ERROR] 
-[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
-[ERROR] Re-run Maven using the -X switch to enable full debug logging.
-[ERROR] 
-[ERROR] For more information about the errors and possible solutions, please read the following articles:
-[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/DependencyResolutionException
