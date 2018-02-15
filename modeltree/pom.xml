@@ -371,7 +371,7 @@
                 <move file="${blenderDir}/Linkipedia/index" todir="${blenderDir}" failonerror="false"/>
                 <move file="${classesDir}/edu/uiuc/xlwikifier/en/xlwikifier-en.xml" tofile="${classesDir}/xlwikifier-en.template.xml" failonerror="false"/>
                 <delete dir="${blenderDir}/Linkipedia" quiet="true"/>
-                <delete dir="${classesDir}/edu/uiuc/xlwikifier/en/xlwikifier-en.xml" quiet="true"/>
+                <delete dir="${classesDir}/edu/uiuc" quiet="true"/>
                 <mkdir dir="${ecpathDir}/illinois-wikifier-models/wikifier/mediawiki_cache/search"/>
                 <chmod dir="${ecpathDir}/illinois-wikifier-models/wikifier/mediawiki_cache/search" perm="777"/>
               </target>
