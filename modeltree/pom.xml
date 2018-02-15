@@ -131,6 +131,12 @@
       <classifier>models</classifier>
     </dependency>
     <dependency>
+      <groupId>edu.uiuc</groupId>
+      <artifactId>illinois-wikifier-multilingual-adept</artifactId>
+      <version>2.7.2</version>
+      <type>jar</type>
+    </dependency>
+    <dependency>
       <groupId>edu.washington.cs.knowitall</groupId>
       <artifactId>reverb-models</artifactId>
       <version>1.4.0</version>
@@ -315,6 +321,12 @@
                   <outputDirectory>${classesDir}</outputDirectory>
                 </artifactItem>
                 <artifactItem>
+                  <groupId>edu.uiuc</groupId>
+                  <artifactId>illinois-wikifier-multilingual-adept</artifactId>
+                  <includes>edu/uiuc/xlwikifier/en/xlwikifier-en.xml</includes>
+                  <outputDirectory>${classesDir}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
                   <groupId>edu.illinois.cs.cogcomp</groupId>
                   <artifactId>xlwikifier-index</artifactId>
                   <type>.tar.gz</type>
@@ -357,7 +369,9 @@
             <configuration>
               <target>
                 <move file="${blenderDir}/Linkipedia/index" todir="${blenderDir}" failonerror="false"/>
+                <move file="${classesDir}/edu/uiuc/xlwikifier/en/xlwikifier-en.xml" tofile="${classesDir}/xlwikifier-en.template.xml" failonerror="false"/>
                 <delete dir="${blenderDir}/Linkipedia" quiet="true"/>
+                <delete dir="${classesDir}/edu/uiuc/xlwikifier/en/xlwikifier-en.xml" quiet="true"/>
                 <mkdir dir="${ecpathDir}/illinois-wikifier-models/wikifier/mediawiki_cache/search"/>
                 <chmod dir="${ecpathDir}/illinois-wikifier-models/wikifier/mediawiki_cache/search" perm="777"/>
               </target>

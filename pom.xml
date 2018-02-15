@@ -135,7 +135,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>3.0.0</version>
+          <version>3.1.0</version>
           <executions>
             <execution>
               <id>make-assembly</id>
@@ -150,7 +150,7 @@
               <descriptor>src/main/assembly/assembly.xml</descriptor>
             </descriptors>
             <formats>
-              <format>tar.gz</format>
+              <format>tgz</format>
             </formats>
           </configuration>
         </plugin>
