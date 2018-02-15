@@ -21,6 +21,8 @@
     <classesDir>${ecpathDir}/classes</classesDir>
     <wikifierDir>${ecpathDir}/illinois-wikifier-models/wikifier</wikifierDir>
     <blenderDir>${classesDir}/edu/rpi/blender</blenderDir>
+    <maven.install.skip>true</maven.install.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
   <dependencies>
     <dependency>
@@ -184,6 +186,12 @@
       <artifactId>scala-library</artifactId>
       <version>2.11.8</version>
     </dependency>
+    <dependency>
+      <groupId>com.bbn.adept</groupId>
+      <artifactId>linkipediaData</artifactId>
+      <version>1.0</version>
+      <type>tgz</type>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -287,7 +295,7 @@
             </configuration>
           </execution>
           <execution>
-            <id>unpack-RPI_EDL_Data</id>
+            <id>unpack_Data</id>
             <goals>
               <goal>unpack</goal>
             </goals>
@@ -324,7 +332,35 @@
                   <type>.tar.gz</type>
                   <outputDirectory>${wikifierDir}/</outputDirectory>
                 </artifactItem>
+                <artifactItem>
+                  <groupId>com.bbn.adept</groupId>
+                  <artifactId>linkipediaData</artifactId>
+                  <version>1.0</version>
+                  <type>tgz</type>
+                  <includes>Linkipedia/index/*</includes>
+                  <outputDirectory>${blenderDir}</outputDirectory>
+                </artifactItem>
               </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <move file="${blenderDir}/Linkipedia/index" todir="${blenderDir}" failonerror="false"/>
+                <delete dir="${blenderDir}/Linkipedia" quiet="true"/>
+                <mkdir dir="${ecpathDir}/illinois-wikifier-models/wikifier/mediawiki_cache/search"/>
+                <chmod dir="${ecpathDir}/illinois-wikifier-models/wikifier/mediawiki_cache/search" perm="777"/>
+              </target>
             </configuration>
           </execution>
         </executions>
@@ -341,6 +377,39 @@
         <plugins>
           <plugin>
             <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <formats>
+                <format>tgz</format>
+              </formats>
+              <tarLongFileMode>gnu</tarLongFileMode>
+              <!-- Because of its size, we don't want to install or deploy this archive
+                   as it is just large. Instead, let the builder just use it from the
+                   target directory as-is.
+              -->
+              <attach>false</attach>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sha256sum-archive</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <workingDirectory>${project.build.directory}</workingDirectory>
+                  <executable>sha256sum</executable>
+                  <arguments>
+                    <argument>-b</argument>
+                    <argument>${project.artifactId}-${project.version}-model.tgz</argument>
+                  </arguments>
+                  <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-model.tgz.sha256sum</outputFile>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
