@@ -395,7 +395,7 @@
               <formats>
                 <format>tgz</format>
               </formats>
-              <tarLongFileMode>gnu</tarLongFileMode>
+              <tarLongFileMode>posix</tarLongFileMode>
               <!-- Because of its size, we don't want to install or deploy this archive
                    as it is just large. Instead, let the builder just use it from the
                    target directory as-is.
