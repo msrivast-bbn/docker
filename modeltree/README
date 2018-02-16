@@ -1,0 +1,13 @@
+Note for Model Builders
+
+You will require about 193 GB of disk space to build this module and the
+archive, which is the default profile. The POM is set up to build the
+the tree in the target directory, which will require about 131,867 MB
+of disk space. It will then build a compressed archive, which will 
+require an additional 65,249MB. 
+
+The POM is set up skip the install and deploy phases. You can manually
+perform these steps, or alter the POM to not skip if you want the
+archive to be copied to your local repository and/or your site
+repository.
+
