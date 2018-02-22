@@ -6,8 +6,23 @@ the tree in the target directory, which will require about 131,867 MB
 of disk space. It will then build a compressed archive, which will 
 require an additional 65,249MB. 
 
-The POM is set up skip the install and deploy phases. You can manually
-perform these steps, or alter the POM to not skip if you want the
-archive to be copied to your local repository and/or your site
-repository.
+Because of the large size of these artifacts, the POM is set up skip 
+the install and deploy phases. You can manually perform these steps, or alter 
+the POM to not skip if you want the archive to be copied to your local 
+repository and/or your site repository.
 
+You can control the creation of the archive and the location of the 
+created tree through the use of a profile specification or the 
+MODEL_DEST environment variable.
+
+If the CreateTree profile is not specified and the MODEL_DEST environment
+variable is not defined, the tree and an archive of that tree will be
+built in the target directory, e.g.:
+
+mvn install
+
+If the MODEL_DEST environment variable is defined and identifies an existing
+directory, the model tree will be built within that directory, and no archive
+will be created.
+
+MODEL_DEST=/nfs/shared_01/a2kd_external mvn install
