@@ -1,0 +1,42 @@
+Docker is a module that wull build two Docker images, a utilities archive, 
+and optionally a model tree. Thewe are:
+
+1) kb - the KnowlegeBase Docker image. This image will run a PostgreSQL server
+   and a Parliament Triple-Store server. These servers store all the data
+   processed by the adept-e2e tool and make it available to the kb-explorer
+   tool for viewing.
+
+2) a2kd - The data ingestion tool Docker image. This image runs a Spark/HADOOP
+   client application that processes a document corpus and stores the result 
+   in a specified Knowledgebase server instance.
+
+3) a2kd-utilities - a tar archive containing the cofiguration file templates,
+   documentation, scripts, executables and libraries necessary to start and 
+   run both kb server instances and a2kd instances.
+
+4) modeltree - this optional submodule will build a file directory tree 
+   consisting of libraries, classes, and resources that can reside outside of
+   the Spark/HADOOP file set. This collection of files is a minimum of 130GB
+   in size, and having Spark/HADOOP distribute this collection as part of the
+   application would have a severe impact on application performance. In order
+   to avoid this, we separated this tree out so that it could be located in
+   a file system shared by all HADOOP nodes or pre-copied to each node as
+   desired.
+
+   Because of it's size, we also made its build an optional part of this
+   module, controlled by a profile specification or the definition of an
+   environment variable. Normally, the modeltree submodule is skipped, and 
+   not normally built. If, however, you specify the command:
+
+   mvn install -PDoModelBuild
+
+   or
+
+   MODEL_BUILD=1 mvn install
+
+   when building from this directory the modeltree submodule will be built.
+   You should be forwarned, however, that building the modeltree submodule
+   will add a requirement for 130GB of additional disk space at a minimum 
+   to the build, and could require as much as 194GB additional disk space.
+   With all the other submodules fully built, this module requires up to 
+   204 GB of disk space.
