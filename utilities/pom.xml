@@ -31,14 +31,14 @@
       <artifactId>kb</artifactId>
       <version>${project.version}</version>
       <classifier>utilities</classifier>
-      <type>tar.gz</type>
+      <type>tgz</type>
     </dependency>
     <dependency>
       <groupId>com.bbn.adept</groupId>
       <artifactId>a2kd</artifactId>
       <version>${project.version}</version>
       <classifier>utilities</classifier>
-      <type>tar.gz</type>
+      <type>tgz</type>
     </dependency>
   </dependencies>
   <build>      
@@ -142,7 +142,7 @@
                   <artifactId>kb</artifactId>
                   <version>${project.version}</version>
                   <classifier>utilities</classifier>
-                  <type>tar.gz</type>
+                  <type>tgz</type>
                   <outputDirectory>${project.build.directory}/appassembler</outputDirectory>
                 </artifactItem>
               </artifactItems>
@@ -160,7 +160,7 @@
                   <artifactId>a2kd</artifactId>
                   <version>${project.version}</version>
                   <classifier>utilities</classifier>
-                  <type>tar.gz</type>
+                  <type>tgz</type>
                   <outputDirectory>${project.build.directory}/appassembler</outputDirectory>
                 </artifactItem>
               </artifactItems>
