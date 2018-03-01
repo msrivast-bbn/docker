@@ -172,11 +172,11 @@
       <version>2.7.7-SNAPSHOT</version>
       <type>jar</type>
     </dependency>
-    <dependency>
+    <!--<dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
       <version>2.10.6</version>
-    </dependency>
+    </dependency>-->
     <!--
     This next dependency is actually scala 2.11.8, but Maven does not
     permit multiple versions of the same dependency to be easily included
@@ -187,11 +187,11 @@
     maven is fooled and we can copy both versions of the library to this
     artifact.
     -->
-    <dependency>
+    <!--<dependency>
       <groupId>com.bbn.adept</groupId>
       <artifactId>scala-library</artifactId>
       <version>2.11.8</version>
-    </dependency>
+    </dependency>-->
     <dependency>
       <groupId>com.bbn.adept</groupId>
       <artifactId>linkipediaData</artifactId>
@@ -255,14 +255,14 @@
                   <groupId>edu.washington.cs.knowitall</groupId>
                   <artifactId>reverb-models</artifactId>
                 </artifactItem>
-                <artifactItem>
+                <!--<artifactItem>
                   <groupId>org.scala-lang</groupId>
                   <artifactId>scala-library</artifactId>
                 </artifactItem>
                 <artifactItem>
                   <groupId>com.bbn.adept</groupId>
                   <artifactId>scala-library</artifactId>
-                </artifactItem>
+                </artifactItem>-->
                 <artifactItem>
                   <groupId>edu.stanford.nlp</groupId>
                   <artifactId>stanford-corenlp</artifactId>

@@ -24,7 +24,7 @@
     <dependency>
       <groupId>com.bbn.adept</groupId>
       <artifactId>adept-kb</artifactId>
-      <version>2.7.6</version>
+      <version>2.7.7</version>
     </dependency>
     <dependency>
       <groupId>com.bbn.adept</groupId>
